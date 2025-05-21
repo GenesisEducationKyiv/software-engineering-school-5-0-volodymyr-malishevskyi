@@ -7,6 +7,13 @@ This repository contains a backend implemented according to the [task](https://g
 - [FrontEnd](http://217.78.237.105/)
 - [Backend](http://217.78.237.105:3000/api/weather?city=Kyiv)
 
+## Key features:
+
+- The database stores a unified city name, which is obtained by geocoding (via the WeatherAPI resource), which prevents duplicate information and sends weather notifications efficiently - 1 request to the API for one city and notifications to all users who are subscribed to it.
+  That is, there cannot be a situation where users subscribe to Kyiv and kyiv and a separate request to the API will be made for each of the city spelling options, which has a positive effect on the API usage quota.
+- Modular structure that allows project scaling
+- Minimum number of external dependencies
+
 ## Table of Contents
 
 1.  [Task Requirements](#task-requirements)
@@ -166,4 +173,43 @@ SMTP_PASSWORD=password
 # Cron jobs described in JSON format for subscription types:
 # type - cron rule
 BROADCAST_CRONS=[["daily", "0 0 * * *"],["hourly", "0 * * * *"]]
+```
+
+## What can be improved
+
+### Use "data" wrapper in API response for better backward compatibility
+
+The assignment states that you cannot make any changes to the contracts. But ideally, should do the following.
+
+It is better to wrap the data in the response in a data type wrapper: For example, returning arrays `[]` makes it difficult to add metadata (such as pagination or totals) without changing the API contract, which can break client applications.
+
+Therefore, it is better to always return an object, such as `items` or `data`
+
+```json
+{
+  "items": []
+}
+```
+
+It allows you to easily add other fields like without breaking backward compatibility.
+
+```json
+{
+  "items": [],
+  "total": 100
+}
+```
+
+Although the problem is most obvious with arrays (where `[]` does not provide space for pagination), the practice of wrapping data in an object is useful for any data returned by the API, for consistency and flexibility.
+**Example:** Easily add metadata at the top level without changing the structure of the underlying data object.
+
+```json
+{
+  "data": {
+    "id": 1,
+    "name": "Product"
+  },
+  "version": "1.1",
+  "status": "success"
+}
 ```
