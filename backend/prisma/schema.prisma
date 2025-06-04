@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionFrequency {
+  daily
+  hourly
+}
+
+model City {
+  id         Int      @id @default(autoincrement()) @map("id")
+  externalId Int?     @unique @map("external_id")
+  fullName   String   @map("full_name")
+  name       String   @unique @map("name")
+  region     String   @map("region")
+  country    String   @map("country")
+  latitude   Float?   @map("latitude")
+  longitude  Float?   @map("longitude")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[] @relation()
+
+  @@index([name], name: "city_name_index")
+}
+
+model Subscription {
+  id                Int                   @id @default(autoincrement()) @map("id")
+  email             String                @unique @map("email")
+  cityId            Int                   @map("city_id")
+  frequency         SubscriptionFrequency @map("frequency")
+  confirmationToken String?               @unique @map("confirmation_token")
+  revokeToken       String?               @unique @map("revoke_token")
+  isConfirmed       Boolean               @default(false) @map("is_confirmed")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Restrict)
+}
