@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsc-watch --onSuccess \"node dist/main.js\"",
     "build": "tsc",
+    "lint": "eslint",
     "start": "node dist/main.js"
   },
   "dependencies": {
