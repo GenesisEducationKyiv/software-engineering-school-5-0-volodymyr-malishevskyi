@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# --- Lint Backend ---
+echo "${GREEN}=== Running linter for backend...${NC}"
+if git diff --cached --name-only | grep -Eq "^backend/"; then
+  echo "Changes detected in backend, running linter..."
+
+  (cd backend && npm run lint)
+  if [ $? -ne 0 ]; then
+    echo "${RED}Backend linting failed. Aborting commit.${NC}"
+    exit 1
+  fi
+  echo "${GREEN}Backend linting passed.${NC}"
+else
+  echo "No backend changes detected, skipping lint."
+fi

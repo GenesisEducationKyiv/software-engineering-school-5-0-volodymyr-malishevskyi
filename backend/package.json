@@ -6,6 +6,7 @@
   "author": "Volodymyr Malishevskyi",
   "main": "dist/main.js",
   "scripts": {
+    "prepare": "../setup.sh",
     "dev": "tsc-watch --onSuccess \"node dist/main.js\"",
     "build": "tsc",
     "lint": "eslint",
