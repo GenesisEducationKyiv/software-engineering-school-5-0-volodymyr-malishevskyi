@@ -38,8 +38,6 @@ Key requirements for the frontend technology stack include:
 - **Programming Language:** TypeScript
 - **Routing:** Vue Router
 
-The frontend application is initialized in [`frontend/src/main.ts`](../../frontend/src/main.ts).
-
 ---
 
 ### Alternatives Considered
@@ -90,8 +88,8 @@ Vue.js with Vite was chosen for its excellent balance of ease of use, performanc
   - **Vue.js 3:** Offers good runtime performance with its reactivity system and optimized rendering.
   - **Vite:** Leverages native ES modules during development and uses Rollup for optimized production builds, resulting in fast load times and efficient asset handling.
 - **Ecosystem and Tooling:**
-  - **Vue Router:** The official routing library for Vue.js ([`frontend/src/router.ts`](../../frontend/src/router.ts)) integrates seamlessly.
-  - **TypeScript Support:** Vue.js 3 has excellent TypeScript support, which is utilized in this project (as seen with `vue-tsc` in [`frontend/package.json`](../../frontend/package.json) and the presence of `tsconfig.json` files like [`frontend/tsconfig.json`](../../frontend/tsconfig.json)).
+  - **Vue Router:** The official routing library for Vue.js integrates seamlessly.
+  - **TypeScript Support:** Vue.js 3 has excellent TypeScript support, which is utilized in this project.
 - **Progressive Framework:** Vue.js can be adopted incrementally. While this project uses it as a full SPA, its flexibility is a plus.
 - **Community:** Vue.js has a strong and active community, providing plenty of resources, libraries, and support.
 
@@ -109,12 +107,12 @@ While React has a larger ecosystem, Vue's perceived simplicity and the exception
 - **Negative:**
   - **Ecosystem Size:** While large, Vue's ecosystem is not as vast as React's. Finding highly specific or niche third-party components might occasionally be more challenging.
   - **Hiring Pool:** The pool of experienced Vue.js developers might be smaller in some regions compared to React developers, though this is changing.
-  - **State Management:** For more complex applications, choosing and integrating a state management solution (like Pinia or Vuex, though not currently used in this project's `package.json`) would be an additional consideration. The current project seems to manage state within components or via simple props/events.
+  - **State Management:** For more complex applications, choosing and integrating a state management solution would be an additional consideration. The current project seems to manage state within components or via simple props/events.
 
 ---
 
 ### Conclusion
 
-The selection of Vue.js with Vite for the frontend provides a modern, performant, and developer-friendly stack well-suited for building the user interface of this weather notification application. It aligns with the project's goals of rapid development and a good user experience. The current implementation in the [`frontend`](../../frontend) directory demonstrates its effectiveness.
+The selection of Vue.js with Vite for the frontend provides a modern, performant, and developer-friendly stack well-suited for building the user interface of this weather notification application. It aligns with the project's goals of rapid development and a good user experience.
 
 ---

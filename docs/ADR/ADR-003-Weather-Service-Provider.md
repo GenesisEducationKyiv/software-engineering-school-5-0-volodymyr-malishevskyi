@@ -15,7 +15,7 @@ The application's core functionality is to provide weather information and send 
 Key requirements for the Weather API service include:
 
 - **Accuracy and Reliability:** The weather data provided must be reasonably accurate and the service should have high uptime.
-- **API Features:** Must provide current weather conditions. A city search or geocoding feature is essential for normalizing city inputs (as implemented in [`backend/src/common/services/weather-api/weather-api.ts`](../../backend/src/common/services/weather-api/weather-api.ts)).
+- **API Features:** Must provide current weather conditions. A city search or geocoding feature is essential for normalizing city inputs.
 - **Ease of Integration:** The API should be well-documented, with a straightforward request/response format (preferably JSON).
 - **Rate Limits & Quotas:** The service needs to offer a free or affordable tier suitable for development, testing, and potentially small-scale production, with clear information on usage limits.
 - **Cost-Effectiveness:** Overall cost, especially if scaling beyond a free tier, is a consideration.
@@ -25,8 +25,6 @@ Key requirements for the Weather API service include:
 ### Decision
 
 **We have decided to use WeatherAPI.com as the external weather data provider.**
-
-This service is currently integrated via the `WeatherApiService` located at [`backend/src/common/services/weather-api/weather-api.ts`](../../backend/src/common/services/weather-api/weather-api.ts) and configured in [`backend/src/config.ts`](../../backend/src/config.ts).
 
 ---
 
@@ -67,9 +65,9 @@ This service is currently integrated via the `WeatherApiService` located at [`ba
 
 WeatherAPI.com was chosen primarily due to its balance of features, ease of use, and a sufficiently generous free tier for the project's initial development and demonstration scope:
 
-- **Sufficient Free Tier:** WeatherAPI.com offers a free plan that includes the necessary features (current weather, city search/geocoding) with reasonable request limits for a project of this scale. This is evident from the project's current usage which relies on an API key (see `WEATHER_API_KEY` in [`README.md`](../../README.md) and [`backend/src/config.ts`](../../backend/src/config.ts)).
-- **Required Features:** It provides both current weather data and a search/lookup API endpoint (`/v1/search.json` used in `searchCity` method in [`backend/src/common/services/weather-api/weather-api.ts`](../../backend/src/common/services/weather-api/weather-api.ts)) which is crucial for the application's requirement to normalize city names and avoid duplicate data, as highlighted in the `README.md`.
-- **Ease of Integration:** The API is straightforward, returns JSON responses, and was simple to integrate, as demonstrated by the existing `WeatherApiService` ([`backend/src/common/services/weather-api/weather-api.ts`](../../backend/src/common/services/weather-api/weather-api.ts)). The base URL is configured as `https://api.weatherapi.com`.
+- **Sufficient Free Tier:** WeatherAPI.com offers a free plan that includes the necessary features (current weather, city search/geocoding) with reasonable request limits for a project of this scale.
+- **Required Features:** It provides both current weather data and a search/lookup API endpoint which is crucial for the application's requirement to normalize city names and avoid duplicate data, as highlighted in the `README.md`.
+- **Ease of Integration:** The API is straightforward, returns JSON responses, and was simple to integrate.
 - **Developer Experience:** Clear documentation and a simple API structure contribute to a positive developer experience for fetching weather data.
 
 While OpenWeatherMap is a strong contender, WeatherAPI.com was perceived as slightly more straightforward for the specific needs of city lookup and current weather data within its free tier at the time of initial development. AccuWeather was deemed potentially too restrictive or costly for a project not requiring its premium accuracy levels from the outset. Weatherstack's free tier limitations were a concern.

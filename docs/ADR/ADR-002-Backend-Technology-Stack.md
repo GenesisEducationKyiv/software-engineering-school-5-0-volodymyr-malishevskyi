@@ -31,8 +31,6 @@ Key requirements for the backend technology stack include:
 - **Programming Language:** TypeScript
 - **ORM (Object-Relational Mapper):** Prisma
 
-This stack is currently implemented in the [`backend`](../../backend) directory.
-
 ---
 
 ### Alternatives Considered
@@ -87,10 +85,10 @@ The Node.js, Express.js, TypeScript, and Prisma stack was chosen for its balance
 
 - **Performance for I/O-Bound Operations:** Node.js's event-driven, non-blocking I/O model is well-suited for applications like this one, which involve many network requests (to external APIs, database) and client interactions.
 - **Developer Productivity & Ecosystem:**
-  - **JavaScript/TypeScript:** A vast talent pool and a massive ecosystem of libraries via npm. Using TypeScript across both frontend ([`frontend/src/main.ts`](frontend/src/main.ts)) and backend ([`backend/src/app.ts`](../../backend/src/app.ts)) can streamline development and knowledge sharing.
-  - **Express.js:** A minimal and flexible framework ([`backend/src/app.ts`](../../backend/src/app.ts)) that is widely adopted, well-documented, and has a rich middleware ecosystem.
-  - **TypeScript:** Provides static typing, leading to fewer runtime errors, improved code maintainability, better tooling (autocompletion, refactoring), and easier collaboration on larger codebases. The entire backend is developed in TypeScript ([`backend/tsconfig.json`](backend/tsconfig.json)).
-  - **Prisma:** A modern, type-safe ORM ([`backend/prisma/schema.prisma`](../../backend/prisma/schema.prisma)) that simplifies database interactions, provides excellent TypeScript integration (e.g., auto-generated types for query results), and handles migrations effectively. This is evident in services like [`backend/src/modules/subscription/subscription.service.ts`](../../backend/src/modules/subscription/subscription.service.ts).
+  - **JavaScript/TypeScript:** A vast talent pool and a massive ecosystem of libraries via npm.
+  - **Express.js:** A minimal and flexible framework that is widely adopted well-documented, and has a rich middleware ecosystem.
+  - **TypeScript:** Provides static typing, leading to fewer runtime errors, improved code maintainability, better tooling (autocompletion, refactoring), and easier collaboration on larger codebases.
+  - **Prisma:** A modern, type-safe ORM that simplifies database interactions, provides excellent TypeScript integration (e.g., auto-generated types for query results), and handles migrations effectively.
 - **Unified Language:** Using TypeScript for both frontend and backend can reduce context switching for developers and allow for shared code/types in the future if a monorepo structure is further leveraged.
 - **Scalability:** Node.js applications can be scaled horizontally by running multiple instances behind a load balancer. The non-blocking nature helps handle many concurrent connections.
 - **Community Support:** All chosen technologies have large, active communities, ensuring ample resources, tutorials, and third-party packages.
@@ -116,6 +114,6 @@ While alternatives like Python or Java offer robustness, the Node.js/TypeScript 
 
 ### Conclusion
 
-The selection of Node.js, Express.js, TypeScript, and Prisma provides a powerful, modern, and productive stack for building the backend of the weather notification application. It balances performance, developer experience, type safety, and ecosystem support, making it a suitable choice for the project's current and foreseeable needs. The existing implementation in the [`backend`](../../backend) directory demonstrates the viability of this stack.
+The selection of Node.js, Express.js, TypeScript, and Prisma provides a powerful, modern, and productive stack for building the backend of the weather notification application. It balances performance, developer experience, type safety, and ecosystem support, making it a suitable choice for the project's current and foreseeable needs.
 
 ---
