@@ -113,16 +113,11 @@ graph TD
 
     UserDeviceUser -- Uses --> FrontendApp
 
-    FrontendApp -- Makes API calls to <br> (HTTPS/JSON, via VITE_API_URL) --> BackendAPI
-    BackendAPI -- Reads/Writes data to/from <br> (TCP/IP, via DATABASE_URL) --> Database
-    BackendAPI -- Fetches weather data from <br> (HTTPS/JSON, via WEATHER_API_KEY) --> ExternalWeatherAPI_C2
-    BackendAPI -- Sends emails via <br> (SMTP, via SMTP_USER/PASSWORD) --> EmailSystem_C2
+    FrontendApp -- Makes API calls to <br> (HTTPS/JSON) --> BackendAPI
+    BackendAPI -- Reads/Writes data to/from <br> (TCP/IP) --> Database
+    BackendAPI -- Fetches weather data from <br> (HTTPS/JSON) --> ExternalWeatherAPI_C2
+    BackendAPI -- Sends emails via <br> (SMTP) --> EmailSystem_C2
 ```
-
-- Frontend and Backend communication is configured via `VITE_API_URL` in `frontend/Dockerfile` (argument passed during Docker build) and used in files like [`frontend/src/api.ts`](../frontend/src/api.ts).
-- Backend to Database communication is configured via `DATABASE_URL` in [`compose.yaml`](./compose.yaml).
-- Backend to WeatherAPI.com is configured via `WEATHER_API_KEY` and base URL in [`backend/src/config.ts`](../backend/src/config.ts).
-- Backend to Email System is configured via `SMTP_*` variables in [`compose.yaml`](./compose.yaml) and [`backend/src/config.ts`](../backend/src/config.ts).
 
 ## 6. Detailed Design
 
@@ -130,48 +125,39 @@ graph TD
 
 - **Technology:** Vue.js, Vite, TypeScript. (See [`docs/ADR/ADR-004-Frontend-Technology-Stack.md`](./ADR/ADR-004-Frontend-Technology-Stack.md))
 - **Key Responsibilities:**
-  - Provide UI for users to input email, city, and frequency for subscription (e.g., [`frontend/src/Weather.vue`](../frontend/src/Weather.vue)).
-  - Handle API calls for subscription, confirmation, unsubscription, and weather lookup (e.g., [`frontend/src/api.ts`](../frontend/src/api.ts)).
-  - Display confirmation and unsubscription status pages (e.g., [`frontend/src/Confirmation.vue`](../frontend/src/Confirmation.vue), [`frontend/src/Unsubscribe.vue`](../frontend/src/Unsubscribe.vue)).
-  - Client-side routing using Vue Router (e.g., [`frontend/src/router.ts`](../frontend/src/router.ts)).
-- **Build Tool:** Vite (e.g., [`frontend/vite.config.ts`](../frontend/vite.config.ts)).
-- **Main initialization file:** [`frontend/src/main.ts`](../frontend/src/main.ts) (from ADR-004).
+  - Provide UI for users to input email, city, and frequency for subscription.
+  - Handle API calls for subscription, confirmation, unsubscription, and weather lookup.
+  - Display confirmation and unsubscription status pages.
+  - Client-side routing.
+- **Build Tool:** Vite.
+- **Main initialization file:** The main application entry point initializes Vue and sets up routing.
 
 ### 6.2. Backend API
 
 - **Technology:** Node.js, Express.js, TypeScript, Prisma. (See [`docs/ADR/ADR-002-Backend-Technology-Stack.md`](./ADR/ADR-002-Backend-Technology-Stack.md))
-- **Main Application File:** [`backend/src/app.ts`](../backend/src/app.ts) (referenced in ADR-002)
+- **Main Application File:** The main application file sets up the Express server and middleware.
 - **Key Modules & Services:**
   - **Subscription Management:**
     - Handles user subscriptions, confirmations, and unsubscriptions.
     - Generates and validates tokens.
     - Interacts with the database to store subscription data.
-    - Service: [`backend/src/modules/subscription/subscription.service.ts`](../backend/src/modules/subscription/subscription.service.ts) (referenced in ADR-002)
-    - Controller: [`backend/src/modules/subscription/subscription.controller.ts`](../backend/src/modules/subscription/subscription.controller.ts)
-    - Router: [`backend/src/modules/subscription/subscription.router.ts`](../backend/src/modules/subscription/subscription.router.ts)
   - **Weather Data Retrieval:**
-    - Fetches current weather data for a given city from WeatherAPI.com.
-    - Service: [`backend/src/modules/weather/weather.service.ts`](../backend/src/modules/weather/weather.service.ts)
-    - Controller: [`backend/src/modules/weather/weather.controller.ts`](../backend/src/modules/weather/weather.controller.ts)
-    - Router: [`backend/src/modules/weather/weather.router.ts`](../backend/src/modules/weather/weather.router.ts)
+    - Fetches current weather data for a given city from the external weather provider.
   - **External Weather API Service:**
     - Wrapper for interacting with WeatherAPI.com, handling requests and responses.
-    - Implementation: [`backend/src/common/services/weather-api/weather-api.ts`](../backend/src/common/services/weather-api/weather-api.ts) (referenced in ADR-003)
   - **Email Notification Service:**
     - Sends emails for subscription confirmation, success, and unsubscription.
-    - Uses Nodemailer.
-    - Implementation: [`backend/src/common/services/gmail-emailing.ts`](../backend/src/common/services/gmail-emailing.ts)
+    - Uses an email library (e.g., Nodemailer).
   - **Scheduled Broadcasting Service:**
     - Periodically fetches weather data for subscribed cities and sends updates to users.
-    - Uses `node-cron` for scheduling, configured via `BROADCAST_CRONS` environment variable (see [`README.md`](./README.md)).
-    - Implementation: [`backend/src/common/services/weather-broadcast.ts`](../backend/src/common/services/weather-broadcast.ts)
-- **Configuration:** Managed via [`backend/src/config.ts`](../backend/src/config.ts) (referenced in ADR-003) using environment variables and Zod for validation.
-- **Error Handling:** Centralized error handling middleware (e.g., [`backend/src/common/middlewares/error-handle.ts`](../backend/src/common/middlewares/error-handle.ts)).
+    - Uses a scheduling library (e.g., `node-cron`) for scheduling, configured via environment variables.
+- **Configuration:** Managed via environment variables with validation (e.g., using Zod).
+- **Error Handling:** Centralized error handling middleware.
 
 ### 6.3. Database
 
 - **Technology:** PostgreSQL. (See [`docs/ADR/ADR-001-Database.md`](./ADR/ADR-001-Database.md))
-- **ORM:** Prisma ([`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma)).
+- **ORM:** Prisma.
 - **Schema Overview:**
 
 * `City`: Stores information about cities, including `externalId` from WeatherAPI.com, normalized `name`, `region`, `country`, `latitude`, `longitude`.
@@ -183,10 +169,10 @@ graph TD
 - **WeatherAPI.com:**
   - Used for fetching current weather data and geocoding/searching cities.
   - Decision rationale: [`docs/ADR/ADR-003-Weather-Service-Provider.md`](./ADR/ADR-003-Weather-Service-Provider.md).
-  - Integration: [`backend/src/common/services/weather-api/weather-api.ts`](../backend/src/common/services/weather-api/weather-api.ts) (referenced in ADR-003).
+  - Integration is handled by a dedicated service in the backend.
 - **Email Service (e.g., Gmail SMTP via Nodemailer):**
   - Used for sending transactional emails (confirmation, notifications).
-  - Integration: [`backend/src/common/services/gmail-emailing.ts`](../backend/src/common/services/gmail-emailing.ts).
+  - Integration is handled by a dedicated service in the backend.
 
 ## 7. Key User Journeys & Interactions (Sequence Diagrams)
 
@@ -355,27 +341,23 @@ The backend exposes a RESTful API for the frontend client and for handling direc
 - **`POST /api/subscribe`**:
   - Description: Subscribes a user to weather updates.
   - Request Body: `{ "email": "string", "city": "string", "frequency": "daily" | "hourly" }`
-  - Response: `200 OK` with message (e.g., `{ "message": "Subscription successful. Please check your email to confirm." }`), or error status (e.g., 400, 409).
-  - Implementation: [`backend/src/modules/subscription/subscription.router.ts`](../backend/src/modules/subscription/subscription.router.ts)
+  - Response: `200 OK` with message, or error status.
 - **`GET /api/confirm/:token`**:
-  - Description: Confirms a user\'s subscription using a token.
+  - Description: Confirms a user's subscription using a token.
   - Path Parameter: `token` (string)
-  - Response: `200 OK` with message (e.g., `{ "message": "Subscription confirmed successfully!" }`) and typically redirects to a frontend page, or error status (e.g., 404).
-  - Implementation: [`backend/src/modules/subscription/subscription.router.ts`](../backend/src/modules/subscription/subscription.router.ts)
+  - Response: `200 OK` with message and typically redirects to a frontend page, or error status.
 - **`GET /api/unsubscribe/:token`**:
   - Description: Unsubscribes a user using a token.
   - Path Parameter: `token` (string)
-  - Response: `200 OK` with message (e.g., `{ "message": "Unsubscribed successfully." }`) and typically redirects to a frontend page, or error status (e.g., 404).
-  - Implementation: [`backend/src/modules/subscription/subscription.router.ts`](../backend/src/modules/subscription/subscription.router.ts)
+  - Response: `200 OK` with message and typically redirects to a frontend page, or error status.
 - **`GET /api/weather?city=<city_name>`**:
   - Description: Retrieves current weather for a specified city.
   - Query Parameter: `city` (string, URL-encoded)
-  - Response: `200 OK` with weather data (e.g., `{ "city": "Kyiv", "temperature": 20, "humidity": 60, "description": "Partly cloudy", "icon": "url_to_icon" }`), or error status (e.g., 400, 404).
-  - Implementation: [`backend/src/modules/weather/weather.router.ts`](../backend/src/modules/weather/weather.router.ts)
+  - Response: `200 OK` with weather data, or error status.
 
 ### 8.3. Data Formats
 
-All API requests and responses use JSON. Input validation is performed on the backend using Zod (as mentioned in [`backend/package.json`](../backend/package.json) and implied by ADR-002).
+All API requests and responses use JSON. Input validation is performed on the backend.
 
 ## 9. Data Management
 
@@ -383,7 +365,6 @@ All API requests and responses use JSON. Input validation is performed on the ba
 
 The data model is defined using Prisma ORM.
 
-- Schema: [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma)
 - Key Entities:
 
 * `City`: Stores information about cities, including `externalId` from WeatherAPI.com, normalized `name`, `region`, `country`, `latitude`, `longitude`.
@@ -419,13 +400,6 @@ The application is designed to be deployed using Docker and Docker Compose.
 - **[`frontend/Dockerfile`](../frontend/Dockerfile)**: Defines a multi-stage build process for the frontend Vue.js application. It installs dependencies, builds the static assets using Vite, and then copies these assets into an Nginx image. The `VITE_API_URL` is passed as a build argument.
 - **[`frontend/nginx.conf`](../frontend/nginx.conf)**: Configures Nginx to serve the static frontend files and handle SPA routing (try_files).
 - The services are orchestrated to start together with `docker compose up` (as per [`README.md`](./README.md)).
-
-### 10.2. Environment Configuration
-
-- Environment variables are used extensively for configuration, as detailed in the [`README.md`](./README.md).
-- A root [`.env`](./.env) file is used by Docker Compose ([`compose.yaml`](./compose.yaml)) to supply variables like `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `WEATHER_API_KEY`, `SMTP_FROM`, `SMTP_USER`, `SMTP_PASSWORD`.
-- The backend application loads its specific configuration (e.g., `PORT`, `APP_URL`, `DATABASE_URL`, `WEATHER_API_KEY`, `SMTP_*`, `BROADCAST_CRONS`) from environment variables, likely validated by a module like [`backend/src/config.ts`](../backend/src/config.ts).
-- The frontend receives its `VITE_API_URL` via a build argument in its Dockerfile, sourced from the environment at build time.
 
 ## 11. Non-Functional Requirements (NFRs)
 
