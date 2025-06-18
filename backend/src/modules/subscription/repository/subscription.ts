@@ -1,37 +1,15 @@
-import { PrismaClient } from '@/lib/prisma';
+import { PrismaClient, Subscription } from '@/lib/prisma';
+import { CreateSubscriptionData, ISubscriptionRepository } from '../types/subscription-repository';
 
-type City = {
-  externalId?: number;
-  name: string;
-  region: string;
-  country: string;
-  fullName: string;
-  latitude?: number;
-  longitude?: number;
-};
-
-type Subscription = {
-  email: string;
-  frequency: 'daily' | 'hourly';
-  confirmationToken: string | null;
-  revokeToken: string | null;
-  isConfirmed: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-type SubscriptionWithCity = Subscription & {
-  city: City;
-};
-
-type CreateSubscriptionData = Omit<SubscriptionWithCity, 'createdAt' | 'updatedAt'>;
-
-export default class SubscriptionRepository {
+export default class SubscriptionRepository implements ISubscriptionRepository {
   constructor(private prisma: PrismaClient) {}
 
   async findByEmail(email: string) {
     return await this.prisma.subscription.findUnique({
       where: { email },
+      include: {
+        city: true,
+      },
     });
   }
 
@@ -73,11 +51,7 @@ export default class SubscriptionRepository {
         },
       },
       include: {
-        city: {
-          select: {
-            fullName: true,
-          },
-        },
+        city: true,
       },
     });
   }
