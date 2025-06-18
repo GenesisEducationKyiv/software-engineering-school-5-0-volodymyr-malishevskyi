@@ -23,10 +23,12 @@ const weatherController = new WeatherController(weatherService);
 app.use('/api', weatherRouterFactory(weatherController));
 
 // Subscription Module
+import SubscriptionRepository from './modules/subscription/repository/subscription';
 import { SubscriptionController } from './modules/subscription/subscription.controller';
 import subscriptionRouterFactory from './modules/subscription/subscription.router';
 import { SubscriptionService } from './modules/subscription/subscription.service';
-const subscriptionService = new SubscriptionService(prisma, weatherApiService, emailingService, {
+const subscriptionRepository = new SubscriptionRepository(prisma);
+const subscriptionService = new SubscriptionService(subscriptionRepository, weatherApiService, emailingService, {
   appUrl: config.appUrl,
 });
 const subscriptionController = new SubscriptionController(subscriptionService);
