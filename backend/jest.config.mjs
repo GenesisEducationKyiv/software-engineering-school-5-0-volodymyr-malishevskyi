@@ -1,5 +1,5 @@
 import { createDefaultPreset, pathsToModuleNameMapper } from 'ts-jest';
-import tsConfig from './tsconfig.json' assert { type: 'json' };
+import tsConfig from './tsconfig.json' with { type: 'json' };
 
 const tsJestTransformCfg = createDefaultPreset().transform;
 
@@ -12,4 +12,5 @@ export default {
   moduleNameMapper: pathsToModuleNameMapper(tsConfig.compilerOptions.paths, {
     prefix: '<rootDir>',
   }),
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/dist/'],
 };
