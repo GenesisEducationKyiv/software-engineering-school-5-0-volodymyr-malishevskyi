@@ -13,4 +13,5 @@ export default {
     prefix: '<rootDir>',
   }),
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/dist/'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.mjs'],
 };

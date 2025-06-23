@@ -10,7 +10,6 @@
     "build": "tsc",
     "start": "node dist/main.js",
     "test": "jest",
-    "test:fast": "jest --testPathPatterns='(unit|integration)\\.spec\\.ts$'",
     "test:unit": "jest --testMatch='**/*.unit.spec.ts'",
     "test:integration": "jest --testMatch='**/*.integration.spec.ts'",
     "test:e2e": "jest --testMatch='**/*.e2e.spec.ts'",
