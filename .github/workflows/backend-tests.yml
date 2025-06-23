@@ -7,7 +7,7 @@ on:
       - ".github/workflows/backend-tests.yml"
 
 jobs:
-  eslint:
+  tests:
     runs-on: ubuntu-latest
 
     steps:
