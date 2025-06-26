@@ -22,10 +22,10 @@ echo "--- Using compose file: $COMPOSE_FILE"
 set -e
 
 echo "Shutting down and remove existing containers..."
-docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true
+docker compose -f "$COMPOSE_FILE" down --remove-orphans || true
 
 echo "Building and starting containers..."
-docker-compose -f "$COMPOSE_FILE" up --build -d
+docker compose -f "$COMPOSE_FILE" up --build -d
 
 echo "Waiting 15s for services to be healthy..."
 sleep 15
@@ -36,6 +36,6 @@ echo "Running Playwright tests..."
 (cd "$PROJECT_ROOT/e2e" && BASE_URL=$url npm test) || TEST_EXIT_CODE=$?
 
 echo "Shutting down containers..."
-docker-compose -f "$COMPOSE_FILE" down --remove-orphans
+docker compose -f "$COMPOSE_FILE" down --remove-orphans
 
 exit $TEST_EXIT_CODE
