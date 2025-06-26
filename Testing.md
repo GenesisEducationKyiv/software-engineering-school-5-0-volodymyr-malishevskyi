@@ -2,7 +2,20 @@
 
 This document contains instructions for running tests for the backend part of the project.
 
-## Running All Tests
+**IMPORTANT!**
+For testing purposes, docker on the host machine is required
+
+## Running E2E Tests
+
+Before running tests, you need to create e2e.env file in the root of project that contains all variables in [e2e.env.example](e2e.env.example).
+
+To run E2E test, in root folder run a single command, that will automatically up project from [compose.e2e.yaml](compose.e2e.yaml) file and run tests:
+
+```bash
+./e2e/run-e2e.sh
+```
+
+## Running Backend Tests
 
 To run all backend tests, switch to backend directory:
 
@@ -16,8 +29,6 @@ And run all test (unit, integration, and e2e) with a single command:
 ```bash
 npm test --verbose
 ```
-
-## Running Tests by Type
 
 Run specific test types with the following commands:
 
