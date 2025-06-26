@@ -6,8 +6,8 @@
   "author": "Volodymyr Malishevskyi",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "tsc-watch --onSuccess \"node dist/main.js\"",
-    "build": "tsc",
+    "dev": "tsc-watch -p tsconfig.build.json --onSuccess \"node dist/main.js\"",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "test": "jest",
     "test:unit": "jest --testMatch='**/*.unit.spec.ts'",

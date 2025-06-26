@@ -1,6 +1,6 @@
+import SubscriptionRepository from '@/modules/subscription/repository/subscription';
 import { PrismaClient, SubscriptionFrequency } from '@prisma/client';
-import { setupTestDatabase, teardownTestDatabase } from '../../../../tests/helpers/test-database';
-import SubscriptionRepository from './subscription';
+import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 
 async function cleanDatabase(prisma: PrismaClient) {
   await prisma.subscription.deleteMany();
