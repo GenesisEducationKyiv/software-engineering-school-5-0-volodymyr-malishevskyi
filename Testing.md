@@ -17,17 +17,25 @@ To run E2E test, in root folder run a single command, that will automatically up
 
 ## Running Backend Tests
 
-To run all backend tests, switch to backend directory:
+For run all test (unit, integration, and e2e) use a single command:
 
 ```bash
-# Switch to backend directory
+./backend/run-tests.sh
+```
+
+### Manual
+
+Before run tests, switch to backend directory and install dependencies:
+
+```bash
 cd backend
+npm install
 ```
 
 And run all test (unit, integration, and e2e) with a single command:
 
 ```bash
-npm test --verbose
+npm run test -- --verbose
 ```
 
 Run specific test types with the following commands:
