@@ -17,7 +17,7 @@ fi
 
 COMPOSE_ENV_FILE="$PROJECT_ROOT/e2e.env"
 
-if [ ! -f "$COMPOSE_ENV_FILE" ]; then
+if [ "$CI" = "false" ] && [ ! -f "$COMPOSE_ENV_FILE" ]; then
     echo "Error: Env file for e2e testing not found at $COMPOSE_ENV_FILE"
     echo "Please create the file with the necessary environment variables based on e2e.env.example"
     exit 1
