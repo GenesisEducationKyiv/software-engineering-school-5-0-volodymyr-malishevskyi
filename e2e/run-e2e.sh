@@ -38,7 +38,7 @@ docker compose -f "$COMPOSE_FILE" up --build -d
 echo "Waiting 15s for services to be healthy..."
 sleep 15
 
-if [ ! "$CI" != "true" ]; then
+if [ "$CI" != "true" ]; then
     echo "Installing Playwright dependencies..."
     (cd "$PROJECT_ROOT/e2e" && npm install && npx playwright install --with-deps) || {
         echo "Failed to install Playwright dependencies"
