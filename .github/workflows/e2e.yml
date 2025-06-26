@@ -46,6 +46,7 @@ jobs:
       - name: Install Playwright Browsers
         # if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+        working-directory: ./e2e
 
       - name: Run tests
         run: ./e2e/run-e2e.sh
