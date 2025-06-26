@@ -1,8 +1,8 @@
 import { IEmailingService } from '@/common/interfaces/emailing-service';
 import { IWeatherApiService } from '@/common/interfaces/weather-api-service';
-import { PrismaClient } from '@/lib/prisma';
 import crypto from 'crypto';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
+import { ISubscriptionRepository } from './types/subscription-repository';
 
 const TOKEN_LENGTH = 32;
 
@@ -12,16 +12,14 @@ function generateToken(length: number): string {
 
 export class SubscriptionService {
   constructor(
-    private prisma: PrismaClient,
+    private subscriptionRepository: ISubscriptionRepository,
     private weatherApiService: IWeatherApiService,
     private emailingService: IEmailingService,
     private readonly config: { appUrl: string },
   ) {}
 
   async subscribe(email: string, city: string, frequency: 'daily' | 'hourly'): Promise<void> {
-    const existingSubscription = await this.prisma.subscription.findUnique({
-      where: { email },
-    });
+    const existingSubscription = await this.subscriptionRepository.findByEmail(email);
 
     if (existingSubscription) {
       throw new EmailAlreadySubscribed();
@@ -34,37 +32,21 @@ export class SubscriptionService {
     const confirmationToken = generateToken(TOKEN_LENGTH);
     const revokeToken = generateToken(TOKEN_LENGTH);
 
-    const subscription = await this.prisma.subscription.create({
-      data: {
-        email,
-        city: {
-          connectOrCreate: {
-            where: {
-              externalId: mostRelevantCity.id,
-            },
-            create: {
-              externalId: mostRelevantCity.id,
-              name: mostRelevantCity.name,
-              region: mostRelevantCity.region,
-              country: mostRelevantCity.country,
-              fullName: [mostRelevantCity.name, mostRelevantCity.region, mostRelevantCity.country].join(', '),
-              latitude: mostRelevantCity.lat,
-              longitude: mostRelevantCity.lon,
-            },
-          },
-        },
-        frequency,
-        confirmationToken,
-        revokeToken,
-        isConfirmed: false,
+    const subscription = await this.subscriptionRepository.create({
+      email,
+      frequency,
+      confirmationToken,
+      revokeToken,
+      city: {
+        externalId: mostRelevantCity.id,
+        name: mostRelevantCity.name,
+        region: mostRelevantCity.region,
+        country: mostRelevantCity.country,
+        fullName: [mostRelevantCity.name, mostRelevantCity.region, mostRelevantCity.country].join(', '),
+        latitude: mostRelevantCity.lat,
+        longitude: mostRelevantCity.lon,
       },
-      include: {
-        city: {
-          select: {
-            fullName: true,
-          },
-        },
-      },
+      isConfirmed: false,
     });
 
     this.emailingService.sendEmail({
@@ -86,24 +68,15 @@ export class SubscriptionService {
   }
 
   async confirmSubscription(token: string): Promise<void> {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { confirmationToken: token },
-      include: {
-        city: {
-          select: {
-            fullName: true,
-          },
-        },
-      },
-    });
+    const subscription = await this.subscriptionRepository.findByConfirmationToken(token);
 
     if (!subscription) {
       throw new TokenNotFound();
     }
 
-    await this.prisma.subscription.update({
-      where: { confirmationToken: token },
-      data: { isConfirmed: true, confirmationToken: null },
+    await this.subscriptionRepository.updateByConfirmationToken(token, {
+      isConfirmed: true,
+      confirmationToken: null,
     });
 
     this.emailingService.sendEmail({
@@ -121,24 +94,13 @@ export class SubscriptionService {
   }
 
   async unsubscribe(token: string): Promise<void> {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { revokeToken: token },
-      include: {
-        city: {
-          select: {
-            fullName: true,
-          },
-        },
-      },
-    });
+    const subscription = await this.subscriptionRepository.findByRevokeToken(token);
 
     if (!subscription) {
       throw new TokenNotFound();
     }
 
-    await this.prisma.subscription.delete({
-      where: { revokeToken: token },
-    });
+    await this.subscriptionRepository.deleteByRevokeToken(token);
 
     this.emailingService.sendEmail({
       to: subscription.email,
