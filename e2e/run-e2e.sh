@@ -38,11 +38,15 @@ docker compose -f "$COMPOSE_FILE" up --build -d
 echo "Waiting 15s for services to be healthy..."
 sleep 15
 
-echo "Installing Playwright dependencies..."
-(cd "$PROJECT_ROOT/e2e" && npm install && npx playwright install --with-deps) || {
-  echo "Failed to install Playwright dependencies"
-  exit 1
-}
+if [ ! "$CI" != "true" ]; then
+    echo "Installing Playwright dependencies..."
+    (cd "$PROJECT_ROOT/e2e" && npm install && npx playwright install --with-deps) || {
+        echo "Failed to install Playwright dependencies"
+        exit 1
+    }
+else
+    echo "Skipping Playwright dependencies installation in CI environment"
+fi
 
 TEST_EXIT_CODE=0
 
