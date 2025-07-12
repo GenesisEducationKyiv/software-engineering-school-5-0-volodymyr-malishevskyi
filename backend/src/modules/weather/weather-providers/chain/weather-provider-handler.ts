@@ -1,3 +1,4 @@
+import logger from '@/common/services/logger';
 import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/weather-provider';
 
 /**
@@ -23,7 +24,12 @@ export abstract class WeatherProviderHandler implements IWeatherProvider {
     } catch (error) {
       if (this.nextHandler) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`${this.getProviderName()} failed, trying next provider: ${errorMessage}`);
+        logger.warn(`${this.getProviderName()} failed, trying next provider`, {
+          type: 'external',
+          provider: this.getProviderName(),
+          city,
+          error: errorMessage,
+        });
         return await this.nextHandler.getWeatherByCity(city);
       }
       throw error;
@@ -39,7 +45,12 @@ export abstract class WeatherProviderHandler implements IWeatherProvider {
     } catch (error) {
       if (this.nextHandler) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`${this.getProviderName()} search failed, trying next provider: ${errorMessage}`);
+        logger.warn(`${this.getProviderName()} search failed, trying next provider`, {
+          type: 'external',
+          provider: this.getProviderName(),
+          city,
+          error: errorMessage,
+        });
         return await this.nextHandler.searchCity(city);
       }
       throw error;

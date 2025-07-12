@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { IEmailingService } from './common/interfaces/emailing-service';
 import errorHandleMiddleware from './common/middlewares/error-handle';
+import requestLoggingMiddleware from './common/middlewares/request-logging';
 import { PrismaClient } from './lib/prisma';
 import {
   SubscriptionController,
@@ -25,6 +26,7 @@ export function createApp(dependencies: {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cors());
+  app.use(requestLoggingMiddleware);
 
   // Weather Module
   const weatherService = new WeatherService(dependencies.weatherApiService);
