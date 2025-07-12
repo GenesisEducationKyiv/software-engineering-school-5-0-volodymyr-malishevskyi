@@ -8,7 +8,7 @@ FROM base AS builder
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY prisma ./prisma/
 
