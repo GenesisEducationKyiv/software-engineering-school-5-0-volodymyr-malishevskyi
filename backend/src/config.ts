@@ -18,8 +18,16 @@ const configSource = {
     from: process.env.SMTP_FROM || 'Weather App <noreply@weather.app',
   },
   weather: {
-    apiKey: process.env.WEATHER_API_KEY,
-    baseUrl: process.env.WEATHER_API_BASE_URL || 'https://api.weatherapi.com/v1',
+    providers: {
+      weatherApi: {
+        apiKey: process.env.WEATHER_API_KEY,
+        priority: parseInt(process.env.WEATHER_API_PRIORITY || '1', 10),
+      },
+      openWeather: {
+        apiKey: process.env.OPENWEATHER_API_KEY,
+        priority: parseInt(process.env.OPENWEATHER_PRIORITY || '2', 10),
+      },
+    },
   },
 };
 
@@ -35,10 +43,22 @@ const configSchema = z.object({
     password: z.string().min(1, 'SMTP_PASSWORD is required'),
     from: z.string().min(1),
   }),
-  weather: z.object({
-    apiKey: z.string().min(1, 'WEATHER_API_KEY is required'),
-    baseUrl: z.string().url('WEATHER_API_BASE_URL must be a valid URL').optional(),
-  }),
+  weather: z
+    .object({
+      providers: z.object({
+        weatherApi: z.object({
+          apiKey: z.string().optional(),
+          priority: z.number().min(1).default(1),
+        }),
+        openWeather: z.object({
+          apiKey: z.string().optional(),
+          priority: z.number().min(1).default(2),
+        }),
+      }),
+    })
+    .refine((data) => data.providers.weatherApi.apiKey || data.providers.openWeather.apiKey, {
+      message: 'At least one weather provider API key must be configured (WEATHER_API_KEY or OPENWEATHER_API_KEY)',
+    }),
 });
 
 const validation = configSchema.safeParse(configSource);

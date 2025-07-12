@@ -4,8 +4,21 @@ import prisma from './lib/prisma';
 import { FetchHttpClient } from './common/http-client';
 const httpClient = new FetchHttpClient();
 
-import { WeatherApiService } from './modules/weather/weather-providers/weather-api/weather-api';
-const weatherApiService = new WeatherApiService(httpClient, config.weather);
+import { WeatherProviderChainFactory } from './modules/weather/weather-providers/chain/weather-provider-chain-factory';
+const weatherApiService = WeatherProviderChainFactory.createChain(httpClient, {
+  weatherApi: config.weather.providers.weatherApi.apiKey
+    ? {
+        apiKey: config.weather.providers.weatherApi.apiKey,
+        priority: config.weather.providers.weatherApi.priority,
+      }
+    : undefined,
+  openWeather: config.weather.providers.openWeather.apiKey
+    ? {
+        apiKey: config.weather.providers.openWeather.apiKey,
+        priority: config.weather.providers.openWeather.priority,
+      }
+    : undefined,
+});
 
 import { GmailEmailingService } from './common/services/gmail-emailing';
 const emailingService = new GmailEmailingService({

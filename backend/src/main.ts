@@ -5,8 +5,8 @@ import config from '@/config';
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';
 
-import { emailingService, weatherApiService, weatherBroadcastService } from './dependencies';
 import { createApp } from './app';
+import { emailingService, weatherApiService, weatherBroadcastService } from './dependencies';
 
 const app = createApp({
   config,
