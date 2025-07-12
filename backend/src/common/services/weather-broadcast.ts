@@ -1,12 +1,12 @@
 import { PrismaClient } from '@/lib/prisma';
+import { IWeatherProvider } from '../../modules/weather/weather-providers/weather-provider';
 import { IEmailingService } from '../interfaces/emailing-service';
-import { IWeatherApiService } from '../interfaces/weather-api-service';
 import delay from '../utils/delay';
 
 export class WeatherBroadcastService {
   constructor(
     private prisma: PrismaClient,
-    private readonly weatherApiService: IWeatherApiService,
+    private readonly weatherApiService: IWeatherProvider,
     private readonly emailingService: IEmailingService,
     private readonly config: { sendingDelay: number } = { sendingDelay: 1000 },
   ) {}

@@ -1,7 +1,6 @@
 import cors from 'cors';
 import express from 'express';
 import { IEmailingService } from './common/interfaces/emailing-service';
-import { IWeatherApiService } from './common/interfaces/weather-api-service';
 import errorHandleMiddleware from './common/middlewares/error-handle';
 import { PrismaClient } from './lib/prisma';
 import {
@@ -11,12 +10,13 @@ import {
   SubscriptionService,
 } from './modules/subscription';
 import { WeatherController, weatherRouterFactory, WeatherService } from './modules/weather';
+import { IWeatherProvider } from './modules/weather/weather-providers/weather-provider';
 
 export function createApp(dependencies: {
   config: {
     appUrl: string;
   };
-  weatherApiService: IWeatherApiService;
+  weatherApiService: IWeatherProvider;
   emailingService: IEmailingService;
   prisma: PrismaClient;
 }) {

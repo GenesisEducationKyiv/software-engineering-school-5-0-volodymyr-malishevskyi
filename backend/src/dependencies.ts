@@ -4,7 +4,7 @@ import prisma from './lib/prisma';
 import { FetchHttpClient } from './common/http-client';
 const httpClient = new FetchHttpClient();
 
-import { WeatherApiService } from './common/services/weather-api/weather-api';
+import { WeatherApiService } from './modules/weather/weather-providers/weather-api/weather-api';
 const weatherApiService = new WeatherApiService(httpClient, config.weather);
 
 import { GmailEmailingService } from './common/services/gmail-emailing';
