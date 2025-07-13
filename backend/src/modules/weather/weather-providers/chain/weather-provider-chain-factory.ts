@@ -1,7 +1,7 @@
 import { HttpClient } from '@/common/http-client';
-import { OpenWeatherService } from '@/modules/weather/weather-providers/openweather/openweather';
-import { WeatherApiService } from '@/modules/weather/weather-providers/weather-api/weather-api';
-import { IWeatherProvider } from '@/modules/weather/weather-providers/weather-provider';
+import { OpenWeatherMapProvider } from '@/modules/weather/weather-providers/openweather/openweather';
+import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
+import { WeatherApiProvider } from '@/modules/weather/weather-providers/weather-api/weather-api';
 import { OpenWeatherHandler } from './openweather-handler';
 import { WeatherApiHandler } from './weather-api-handler';
 import { WeatherProviderHandler } from './weather-provider-handler';
@@ -30,7 +30,7 @@ export class WeatherProviderChainFactory {
 
     // Create WeatherAPI handler if configured
     if (config.weatherApi?.apiKey) {
-      const weatherApiService = new WeatherApiService(httpClient, {
+      const weatherApiService = new WeatherApiProvider(httpClient, {
         apiKey: config.weatherApi.apiKey,
       });
       const weatherApiHandler = new WeatherApiHandler(weatherApiService);
@@ -42,7 +42,7 @@ export class WeatherProviderChainFactory {
 
     // Create OpenWeatherMap handler if configured
     if (config.openWeather?.apiKey) {
-      const openWeatherService = new OpenWeatherService(httpClient, {
+      const openWeatherService = new OpenWeatherMapProvider(httpClient, {
         apiKey: config.openWeather.apiKey,
       });
       const openWeatherHandler = new OpenWeatherHandler(openWeatherService);

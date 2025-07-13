@@ -1,26 +1,26 @@
 import 'module-alias/register';
-
-import config from '@/config';
+import 'reflect-metadata';
 
 import logger from '@/common/services/logger';
+import config from '@/config';
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';
 
+import { WeatherBroadcastService } from '@/common/services/weather-broadcast';
 import { createApp } from './app';
-import { emailingService, weatherApiService, weatherBroadcastService } from './dependencies';
+import { container, initializeDI } from './container';
 
-const app = createApp({
-  config,
-  weatherApiService: weatherApiService,
-  emailingService: emailingService,
-  prisma,
-});
+// Initialize DI container with configuration
+initializeDI(config);
+
+// Create express app
+const app = createApp(container);
 
 const server = app.listen(config.port, () => {
   logger.info(`Server started: http://127.0.0.1:${config.port}`, { type: 'startup', port: config.port });
 });
 
-config.broadcastCrons.forEach(([type, cron]) => {
+config.broadcastCrons.forEach(([type, cron]: ['daily' | 'hourly', string]) => {
   if (!nodeCron.validate(cron)) {
     logger.error(`Invalid cron expression for ${type}: ${cron}, skipping...`, {
       type: 'cron',
@@ -36,7 +36,8 @@ config.broadcastCrons.forEach(([type, cron]) => {
     cronExpression: cron,
   });
   nodeCron.schedule(cron, async () => {
-    weatherBroadcastService.broadcast(type).catch((error) => {
+    const weatherBroadcastService = container.resolve<WeatherBroadcastService>('WeatherBroadcastService');
+    weatherBroadcastService.broadcast(type).catch((error: Error) => {
       logger.error(`Error broadcasting ${type} weather`, {
         type: 'broadcast',
         cronType: type,

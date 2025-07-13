@@ -1,5 +1,5 @@
 import logger from '@/common/services/logger';
-import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/weather-provider';
+import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/types/weather-provider';
 
 /**
  * Abstract base class for weather provider chain handlers

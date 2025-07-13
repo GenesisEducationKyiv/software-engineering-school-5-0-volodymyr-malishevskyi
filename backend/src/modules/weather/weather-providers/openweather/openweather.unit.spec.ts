@@ -1,5 +1,5 @@
 import { CityNotFoundError, OpenWeatherError } from './errors/openweather';
-import { OpenWeatherService } from './openweather';
+import { OpenWeatherMapProvider } from './openweather';
 
 const mockHttpClient = {
   get: jest.fn(),
@@ -14,8 +14,8 @@ beforeEach(() => {
   mockHttpClient.get.mockClear();
 });
 
-describe('OpenWeatherService', () => {
-  const openWeatherService = new OpenWeatherService(mockHttpClient, {
+describe('OpenWeatherProvider', () => {
+  const openWeatherProvider = new OpenWeatherMapProvider(mockHttpClient, {
     apiKey: 'test-api-key',
   });
 
@@ -43,7 +43,7 @@ describe('OpenWeatherService', () => {
         }),
       });
 
-      const weather = await openWeatherService.getWeatherByCity('Kyiv');
+      const weather = await openWeatherProvider.getWeatherByCity('Kyiv');
 
       expect(weather).toEqual({
         city: 'Kyiv',
@@ -66,7 +66,7 @@ describe('OpenWeatherService', () => {
         }),
       });
 
-      await expect(openWeatherService.getWeatherByCity('InvalidCity')).rejects.toThrow(CityNotFoundError);
+      await expect(openWeatherProvider.getWeatherByCity('InvalidCity')).rejects.toThrow(CityNotFoundError);
     });
 
     it('should handle non-JSON error response', async () => {
@@ -79,7 +79,7 @@ describe('OpenWeatherService', () => {
         }),
       });
 
-      await expect(openWeatherService.getWeatherByCity('SomeCity')).rejects.toThrow(OpenWeatherError);
+      await expect(openWeatherProvider.getWeatherByCity('SomeCity')).rejects.toThrow(OpenWeatherError);
     });
   });
 
@@ -104,7 +104,7 @@ describe('OpenWeatherService', () => {
         }),
       });
 
-      const cities = await openWeatherService.searchCity('Kyiv');
+      const cities = await openWeatherProvider.searchCity('Kyiv');
 
       expect(cities).toHaveLength(1);
       expect(cities[0]).toEqual({
@@ -128,7 +128,7 @@ describe('OpenWeatherService', () => {
         }),
       });
 
-      const cities = await openWeatherService.searchCity('NonexistentCity');
+      const cities = await openWeatherProvider.searchCity('NonexistentCity');
 
       expect(cities).toEqual([]);
     });

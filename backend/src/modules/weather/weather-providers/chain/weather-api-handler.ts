@@ -1,12 +1,12 @@
-import { WeatherApiService } from '@/modules/weather/weather-providers/weather-api/weather-api';
-import { City, Weather } from '@/modules/weather/weather-providers/weather-provider';
+import { City, Weather } from '@/modules/weather/weather-providers/types/weather-provider';
+import { WeatherApiProvider } from '@/modules/weather/weather-providers/weather-api/weather-api';
 import { WeatherProviderHandler } from './weather-provider-handler';
 
 /**
  * Adapter that wraps WeatherApiService to work with Chain of Responsibility pattern
  */
 export class WeatherApiHandler extends WeatherProviderHandler {
-  constructor(private weatherApiService: WeatherApiService) {
+  constructor(private weatherApiService: WeatherApiProvider) {
     super();
   }
 

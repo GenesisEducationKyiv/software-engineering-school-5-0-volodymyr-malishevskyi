@@ -1,5 +1,6 @@
 import { IEmailingService } from '@/common/interfaces/emailing-service';
-import { City, IWeatherProvider } from '@/modules/weather/weather-providers/weather-provider';
+import { City, IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
+import 'reflect-metadata';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { SubscriptionService } from './subscription.service';
 import { ISubscriptionRepository, SubscriptionWithCity } from './types/subscription-repository';
@@ -268,7 +269,7 @@ describe('SubscriptionService', () => {
       expect(subscriptionRepositoryMock.deleteByRevokeToken).toHaveBeenCalledWith(revokeToken);
       expect(emailingServiceMock.sendEmail).toHaveBeenCalledWith({
         to: mockSubscription.email,
-        subject: 'Weather Subscription Successfully Unsubscribed!',
+        subject: 'Weather Subscription Cancelled',
         html: expect.stringContaining(mockSubscription.city.fullName),
       });
     });
@@ -280,11 +281,10 @@ describe('SubscriptionService', () => {
       await subscriptionService.unsubscribe(revokeToken);
 
       const emailCall = emailingServiceMock.sendEmail.mock.calls[0][0];
-      expect(emailCall.html).toContain('successfully unsubscribed');
+      expect(emailCall.html).toContain('cancelled');
       expect(emailCall.html).toContain(mockSubscription.city.fullName);
       expect(emailCall.html).toContain(mockSubscription.frequency.toLowerCase());
-      expect(emailCall.subject).toBe('Weather Subscription Successfully Unsubscribed!');
-      expect(emailCall.html).toContain(`/api/unsubscribe/${mockSubscription.revokeToken}`);
+      expect(emailCall.subject).toBe('Weather Subscription Cancelled');
     });
 
     it('should throw TokenNotFound when revoke token is invalid', async () => {

@@ -2,11 +2,6 @@ import SubscriptionRepository from '@/modules/subscription/repository/subscripti
 import { PrismaClient, SubscriptionFrequency } from '@prisma/client';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 
-async function cleanDatabase(prisma: PrismaClient) {
-  await prisma.subscription.deleteMany();
-  await prisma.city.deleteMany();
-}
-
 describe('SubscriptionRepository', () => {
   let prisma: PrismaClient;
   let repository: SubscriptionRepository;
@@ -27,7 +22,8 @@ describe('SubscriptionRepository', () => {
 
   beforeEach(async () => {
     // Clean database before each test
-    await cleanDatabase(prisma);
+    await prisma.subscription.deleteMany();
+    await prisma.city.deleteMany();
   });
 
   describe('create', () => {

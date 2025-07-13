@@ -1,11 +1,16 @@
+import { injectable, inject } from 'tsyringe';
 import { HTTPBadRequestError, HTTPNotFoundError } from '@/common/errors/http-error';
 import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { ISubscriptionService } from './types/subscription-service';
 
+@injectable()
 export class SubscriptionController {
-  constructor(private subscriptionService: ISubscriptionService) {}
+  constructor(
+    @inject('SubscriptionService')
+    private subscriptionService: ISubscriptionService,
+  ) {}
 
   async subscribe(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
