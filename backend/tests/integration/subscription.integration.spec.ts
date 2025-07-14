@@ -22,6 +22,19 @@ const mockEmailingService = {
   sendEmail: jest.fn(),
 } as unknown as jest.Mocked<GmailEmailingService>;
 
+// Mock token generator utility
+jest.mock('@/common/utils/token-generator', () => ({
+  generateConfirmationToken: jest.fn().mockReturnValue('test-confirmation-token'),
+  generateRevokeToken: jest.fn().mockReturnValue('test-revoke-token'),
+  generateToken: jest.fn().mockReturnValue('test-token'),
+}));
+
+const mockEmailTemplateService = {
+  getSubscriptionConfirmationTemplate: jest.fn().mockReturnValue('<html>confirmation</html>'),
+  getSubscriptionConfirmedTemplate: jest.fn().mockReturnValue('<html>confirmed</html>'),
+  getSubscriptionCancelledTemplate: jest.fn().mockReturnValue('<html>cancelled</html>'),
+};
+
 const mockWeatherApiService = {
   getWeatherByCity: jest.fn(),
   searchCity: jest.fn(),
@@ -65,6 +78,7 @@ describe('Subscription Integration Tests', () => {
     // container.registerInstance('WeatherApiProvider', mockWeatherApiService);
     // container.registerInstance('OpenWeatherMapProvider', mockWeatherApiService);
     container.registerInstance('EmailingService', mockEmailingService);
+    container.registerInstance('EmailTemplateService', mockEmailTemplateService);
 
     // Register dependencies for CachedWeatherProvider
     container.registerInstance('WeatherProvider', mockWeatherApiService);

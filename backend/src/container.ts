@@ -4,6 +4,7 @@ import { InMemoryCacheProvider } from '@/common/cache/providers/in-memory-cache-
 import { MemcachedCacheProvider } from '@/common/cache/providers/memcached-cache-provider';
 import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
 import { FetchHttpClient } from '@/common/http-client';
+import { EmailTemplateService } from '@/common/services/email-template-service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
 import logger from '@/common/services/logger';
 import { WeatherBroadcastService } from '@/common/services/weather-broadcast';
@@ -81,6 +82,7 @@ export function initializeDI(config: Config): void {
 
   // Business services
   container.registerSingleton('EmailingService', GmailEmailingService);
+  container.registerSingleton('EmailTemplateService', EmailTemplateService);
   container.registerSingleton('WeatherBroadcastService', WeatherBroadcastService);
 
   // Weather module

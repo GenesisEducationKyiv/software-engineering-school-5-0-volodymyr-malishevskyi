@@ -8,6 +8,7 @@ import { createApp } from '@/app';
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
 import { MetricsService } from '@/common/metrics/metrics.service';
+import { EmailTemplateService } from '@/common/services/email-template-service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
 import { container } from '@/container';
 import SubscriptionRepository from '@/modules/subscription/repository/subscription';
@@ -26,6 +27,13 @@ import { setupTestRedis, teardownTestRedis } from '../helpers/test-redis';
 const mockEmailingService = {
   sendEmail: jest.fn(),
 } as unknown as jest.Mocked<GmailEmailingService>;
+
+// Mock token generator utility with unique tokens
+jest.mock('@/common/utils/token-generator', () => ({
+  generateConfirmationToken: jest.fn(() => `confirmation-${Date.now()}-${Math.random()}`),
+  generateRevokeToken: jest.fn(() => `revoke-${Date.now()}-${Math.random()}`),
+  generateToken: jest.fn((length: number) => `token-${Date.now()}-${Math.random()}`.slice(0, length)),
+}));
 
 const mockWeatherApiProvider = {
   getWeatherByCity: jest.fn(),
@@ -63,6 +71,9 @@ describe('App E2E Tests', () => {
 
     // Register mock services
     container.registerInstance('EmailingService', mockEmailingService);
+
+    // Register real EmailTemplateService for full integration testing
+    container.registerSingleton('EmailTemplateService', EmailTemplateService);
 
     // Register dependencies for CachedWeatherProvider
     container.registerInstance('WeatherProvider', mockWeatherApiProvider);
@@ -178,9 +189,13 @@ describe('App E2E Tests', () => {
       const subscribeEmailCallArgs = mockEmailingService.sendEmail.mock.calls[0][0];
       expect(subscribeEmailCallArgs.to).toBe('user@example.com');
       expect(subscribeEmailCallArgs.subject).toBe('Weather Subscription Confirmation');
+      expect(subscribeEmailCallArgs.html).toContain('Weather Subscription Confirmation');
+      expect(subscribeEmailCallArgs.html).toContain('Confirm Subscription');
       expect(subscribeEmailCallArgs.html).toContain(
         `http://localhost:3000/api/confirm/${pendingSubscription?.confirmationToken}`,
       );
+      expect(subscribeEmailCallArgs.html).toContain('<strong>City:</strong> Kyiv, Kyiv Oblast, Ukraine');
+      expect(subscribeEmailCallArgs.html).toContain('<strong>Frequency:</strong> daily');
 
       // Step 3: Confirm subscription
       const confirmResponse = await request(app).get(`/api/confirm/${pendingSubscription!.confirmationToken}`);
@@ -202,8 +217,14 @@ describe('App E2E Tests', () => {
       const confirmationEmailCallArgs = mockEmailingService.sendEmail.mock.calls[1][0];
       expect(confirmationEmailCallArgs.to).toBe('user@example.com');
       expect(confirmationEmailCallArgs.subject).toBe('Weather Subscription Successfully Confirmed!');
-      expect(confirmationEmailCallArgs.html).toContain(`City: ${confirmedSubscription?.city.fullName}`);
-      expect(confirmationEmailCallArgs.html).toContain(`Frequency: ${confirmedSubscription?.frequency.toLowerCase()}`);
+      expect(confirmationEmailCallArgs.html).toContain('Subscription Successfully Confirmed!');
+      expect(confirmationEmailCallArgs.html).toContain(
+        `<strong>City:</strong> ${confirmedSubscription?.city.fullName}`,
+      );
+      expect(confirmationEmailCallArgs.html).toContain(
+        `<strong>Frequency:</strong> ${confirmedSubscription?.frequency.toLowerCase()}`,
+      );
+      expect(confirmationEmailCallArgs.html).toContain('Unsubscribe');
       expect(confirmationEmailCallArgs.html).toContain(
         `http://localhost:3000/api/unsubscribe/${confirmedSubscription?.revokeToken}`,
       );
@@ -233,42 +254,45 @@ describe('App E2E Tests', () => {
       const unsubscribeEmailCallArgs = mockEmailingService.sendEmail.mock.calls[2][0];
       expect(unsubscribeEmailCallArgs.to).toBe('user@example.com');
       expect(unsubscribeEmailCallArgs.subject).toBe('Weather Subscription Cancelled');
-      expect(unsubscribeEmailCallArgs.html).toContain(`<p>City: ${confirmedSubscription?.city.fullName}</p>`);
-      expect(unsubscribeEmailCallArgs.html).toContain(`<p>Frequency: ${confirmedSubscription?.frequency}</p>`);
+      expect(unsubscribeEmailCallArgs.html).toContain('Weather Subscription Cancelled');
+      expect(unsubscribeEmailCallArgs.html).toContain(`<strong>City:</strong> ${confirmedSubscription?.city.fullName}`);
+      expect(unsubscribeEmailCallArgs.html).toContain(
+        `<strong>Frequency:</strong> ${confirmedSubscription?.frequency}`,
+      );
     });
   });
 
-  // describe('Error Handling', () => {
-  //   it('should handle error scenarios gracefully', async () => {
-  //     // Test invalid city search
-  //     mockWeatherApiProvider.searchCity = jest.fn().mockResolvedValue([]);
+  describe('Error Handling', () => {
+    it('should handle error scenarios gracefully', async () => {
+      // Test invalid city search
+      mockWeatherApiProvider.searchCity = jest.fn().mockResolvedValue([]);
 
-  //     const subscribeResponse = await request(app).post('/api/subscribe').send({
-  //       email: 'user@example.com',
-  //       city: 'NonexistentCity',
-  //       frequency: 'daily',
-  //     });
+      const subscribeResponse = await request(app).post('/api/subscribe').send({
+        email: 'user@example.com',
+        city: 'NonexistentCity',
+        frequency: 'daily',
+      });
 
-  //     expect(subscribeResponse.status).toBe(500);
+      expect(subscribeResponse.status).toBe(500);
 
-  //     // Test weather API failures
-  //     mockWeatherApiProvider.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));
+      // Test weather API failures
+      mockWeatherApiProvider.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));
 
-  //     const weatherResponse = await request(app).get('/api/weather').query({ city: 'Kyiv' });
+      const weatherResponse = await request(app).get('/api/weather').query({ city: 'Kyiv' });
 
-  //     expect(weatherResponse.status).toBe(500);
+      expect(weatherResponse.status).toBe(500);
 
-  //     // Test invalid confirmation token
-  //     const confirmResponse = await request(app).get('/api/confirm/invalid-token-that-does-not-exist');
+      // Test invalid confirmation token
+      const confirmResponse = await request(app).get('/api/confirm/invalid-token-that-does-not-exist');
 
-  //     expect(confirmResponse.status).toBe(404);
+      expect(confirmResponse.status).toBe(404);
 
-  //     // Test invalid unsubscribe token
-  //     const unsubscribeResponse = await request(app).get('/api/unsubscribe/invalid-token-that-does-not-exist');
+      // Test invalid unsubscribe token
+      const unsubscribeResponse = await request(app).get('/api/unsubscribe/invalid-token-that-does-not-exist');
 
-  //     expect(unsubscribeResponse.status).toBe(404);
-  //   });
-  // });
+      expect(unsubscribeResponse.status).toBe(404);
+    });
+  });
 
   describe('Subscription with different frequencies', () => {
     it('should allow both daily and hourly frequencies', async () => {

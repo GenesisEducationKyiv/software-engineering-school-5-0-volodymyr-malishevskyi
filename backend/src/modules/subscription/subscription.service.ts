@@ -1,16 +1,11 @@
 import { IEmailingService } from '@/common/interfaces/emailing-service';
+import { IEmailTemplateService } from '@/common/interfaces/email-template-service';
+import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
 import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
 import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
-import crypto from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { ISubscriptionRepository } from './types/subscription-repository';
-
-const TOKEN_LENGTH = 32;
-
-function generateToken(length: number): string {
-  return crypto.randomBytes(length).toString('hex').slice(0, length);
-}
 
 /**
  * Subscription Service
@@ -27,6 +22,8 @@ export class SubscriptionService {
     private weatherProvider: IWeatherProvider,
     @inject('EmailingService')
     private emailingService: IEmailingService,
+    @inject('EmailTemplateService')
+    private emailTemplateService: IEmailTemplateService,
     @inject('Config')
     private readonly config: { appUrl: string },
   ) {}
@@ -53,8 +50,8 @@ export class SubscriptionService {
       throw new CityNotFoundError();
     }
 
-    const confirmationToken = generateToken(TOKEN_LENGTH);
-    const revokeToken = generateToken(TOKEN_LENGTH);
+    const confirmationToken = generateConfirmationToken();
+    const revokeToken = generateRevokeToken();
 
     const subscription = await this.subscriptionRepository.create({
       email,
@@ -73,21 +70,16 @@ export class SubscriptionService {
       isConfirmed: false,
     });
 
+    const confirmationTemplate = this.emailTemplateService.getSubscriptionConfirmationTemplate({
+      confirmationUrl: `${this.config.appUrl}/api/confirm/${confirmationToken}`,
+      cityFullName: subscription.city.fullName,
+      frequency: subscription.frequency.toLowerCase(),
+    });
+
     this.emailingService.sendEmail({
       to: email,
       subject: 'Weather Subscription Confirmation',
-      html: `
-        <p>
-          You requested a subscription to weather updates.
-          Please confirm your subscription by clicking the link: 
-          <a href="${this.config.appUrl}/api/confirm/${confirmationToken}">Confirm Subscription</a>
-        </p>
-        
-        <br>
-        <p>City: ${subscription.city.fullName}</p>
-        <p>Frequency: ${subscription.frequency.toLowerCase()}</p>
-        <br>
-      `,
+      html: confirmationTemplate,
     });
   }
 
@@ -108,17 +100,16 @@ export class SubscriptionService {
       confirmationToken: null,
     });
 
+    const confirmedTemplate = this.emailTemplateService.getSubscriptionConfirmedTemplate({
+      cityFullName: subscription.city.fullName,
+      frequency: subscription.frequency.toLowerCase(),
+      unsubscribeUrl: `${this.config.appUrl}/api/unsubscribe/${subscription.revokeToken}`,
+    });
+
     this.emailingService.sendEmail({
       to: subscription.email,
       subject: 'Weather Subscription Successfully Confirmed!',
-      html: `
-        <p>Your subscription successfully confirmed!</p>
-        <br>
-        <p>City: ${subscription.city.fullName}</p>
-        <p>Frequency: ${subscription.frequency.toLowerCase()}</p>
-        <br>
-        <p>You always can <a href="${this.config.appUrl}/api/unsubscribe/${subscription.revokeToken}">Unsubscribe</a></p>
-      `,
+      html: confirmedTemplate,
     });
   }
 
@@ -136,17 +127,15 @@ export class SubscriptionService {
 
     await this.subscriptionRepository.deleteByRevokeToken(token);
 
+    const cancelledTemplate = this.emailTemplateService.getSubscriptionCancelledTemplate({
+      cityFullName: subscription.city.fullName,
+      frequency: subscription.frequency.toLowerCase(),
+    });
+
     this.emailingService.sendEmail({
       to: subscription.email,
       subject: 'Weather Subscription Cancelled',
-      html: `
-        <p>Your weather subscription has been cancelled.</p>
-        <br>
-        <p>City: ${subscription.city.fullName}</p>
-        <p>Frequency: ${subscription.frequency.toLowerCase()}</p>
-        <br>
-        <p>You can always subscribe again at any time.</p>
-      `,
+      html: cancelledTemplate,
     });
   }
 }
