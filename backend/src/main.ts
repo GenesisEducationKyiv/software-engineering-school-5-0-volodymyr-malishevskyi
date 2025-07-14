@@ -2,16 +2,16 @@ import 'module-alias/register';
 import 'reflect-metadata';
 
 import logger from '@/common/services/logger';
-import config from '@/config';
+import { type Config } from '@/config';
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';
 
 import { IBroadcastService } from '@/common/interfaces/broadcast-service';
 import { createApp } from './app';
-import { container, initializeDI } from './container';
+import { container } from './container';
 
-// Initialize DI container with configuration
-initializeDI(config);
+// Get config from container
+const config = container.resolve<Config>('Config');
 
 // Create express app
 const app = createApp(container);

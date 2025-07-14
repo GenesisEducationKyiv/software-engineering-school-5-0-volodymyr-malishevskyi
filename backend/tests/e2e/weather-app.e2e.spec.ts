@@ -1,33 +1,17 @@
 import 'reflect-metadata';
 
-import { ConfigFactory } from '@/config/config-factory';
-
-const config = ConfigFactory.createTestConfig();
-
 import { createApp } from '@/app';
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
-import { MetricsService } from '@/common/metrics/metrics.service';
-import { EmailTemplateService } from '@/common/services/email-template-service';
-import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { NotificationService } from '@/common/services/notification';
+import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
-import SubscriptionRepository from '@/modules/subscription/repository/subscription';
-import { SubscriptionController } from '@/modules/subscription/subscription.controller';
-import { SubscriptionService } from '@/modules/subscription/subscription.service';
-import { CachedWeatherProvider } from '@/modules/weather/weather-providers/cached-weather-provider';
-import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
-import { WeatherController } from '@/modules/weather/weather.controller';
-import { WeatherService } from '@/modules/weather/weather.service';
 import { PrismaClient } from '@prisma/client';
+import { DependencyContainer } from 'tsyringe';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 import { setupTestRedis, teardownTestRedis } from '../helpers/test-redis';
-
-const mockEmailingService = {
-  sendEmail: jest.fn(),
-} as unknown as jest.Mocked<GmailEmailingService>;
+import { mockEmailingService, mockWeatherProvider, mockMetricsService } from '../helpers/mocks';
 
 // Mock token generator utility with unique tokens
 jest.mock('@/common/utils/token-generator', () => ({
@@ -36,83 +20,35 @@ jest.mock('@/common/utils/token-generator', () => ({
   generateToken: jest.fn((length: number) => `token-${Date.now()}-${Math.random()}`.slice(0, length)),
 }));
 
-const mockWeatherApiProvider = {
-  getWeatherByCity: jest.fn(),
-  searchCity: jest.fn(),
-} as jest.Mocked<IWeatherProvider>;
-
-const mockMetricsService = {
-  getMetrics: jest.fn(),
-  getRegistry: jest.fn(),
-  incrementCacheHits: jest.fn(),
-  incrementCacheMisses: jest.fn(),
-  startSetDurationTimer: jest.fn(),
-} as unknown as jest.Mocked<MetricsService>;
-
 describe('App E2E Tests', () => {
   let app: App;
   let prisma: PrismaClient;
   let cacheProvider: ICacheProvider;
+  let testContainer: DependencyContainer;
 
   beforeAll(async () => {
     // Setup test database and Redis
     const dbSetup = await setupTestDatabase();
     const redisSetup = await setupTestRedis();
 
-    container.clearInstances();
-    container.reset();
+    // Create child container from main container
+    testContainer = container.createChildContainer();
 
-    container.registerInstance('PrismaClient', dbSetup.prisma);
+    // Register test config and database
+    const config = ConfigFactory.createTestConfig();
+    testContainer.registerInstance('Config', config);
+    testContainer.registerInstance('PrismaClient', dbSetup.prisma);
 
-    // Register config
-    container.registerInstance('Config', config);
+    // Override services with mocks
+    testContainer.registerInstance('MetricsService', mockMetricsService);
+    testContainer.registerInstance('EmailingService', mockEmailingService);
+    testContainer.registerInstance('WeatherProvider', mockWeatherProvider);
 
-    // Register Metrics
-    container.registerInstance('MetricsService', mockMetricsService);
-
-    // Register mock services
-    container.registerInstance('EmailingService', mockEmailingService);
-
-    // Register real EmailTemplateService for full integration testing
-    container.registerSingleton('EmailTemplateService', EmailTemplateService);
-
-    // Register NotificationService as singleton (depends on EmailingService and EmailTemplateService)
-    container.registerSingleton('NotificationService', NotificationService);
-
-    // Register dependencies for CachedWeatherProvider
-    container.registerInstance('WeatherProvider', mockWeatherApiProvider);
-
-    // Register real Redis cache provider instead of mock
-    // try {
-    //   new RedisCacheProvider(redisSetup.redisUrl)
-    // } catch (error) {
-    //   console.log('error1', error);
-    // }
-
+    // Register real Redis cache provider for full integration testing
     cacheProvider = new RedisCacheProvider(redisSetup.redisUrl);
-    container.registerInstance('CacheProvider', cacheProvider);
-    // container.registerSingleton('CacheProvider', InMemoryCacheProvider);
+    testContainer.registerInstance('CacheProvider', cacheProvider);
 
-    // Register CachedWeatherProvider as singleton (not instance)
-    container.registerSingleton('CachedWeatherProvider', CachedWeatherProvider);
-
-    // Register CachedWeatherService as singleton (not instance)
-    container.registerSingleton('WeatherService', WeatherService);
-
-    // Register WeatherController as singleton (not instance)
-    container.registerSingleton('WeatherController', WeatherController);
-
-    // Register mock subscription repository
-    container.registerSingleton('SubscriptionRepository', SubscriptionRepository);
-
-    // Register SubscriptionService as singleton
-    container.registerSingleton('SubscriptionService', SubscriptionService);
-
-    // Register SubscriptionController as singleton
-    container.registerSingleton('SubscriptionController', SubscriptionController);
-
-    app = createApp(container);
-
+    app = createApp(testContainer);
     prisma = dbSetup.prisma;
   }, 60000);
 
@@ -126,20 +62,18 @@ describe('App E2E Tests', () => {
   });
 
   beforeEach(async () => {
-    // Reset mocks and clean database before each test
-    mockWeatherApiProvider.getWeatherByCity.mockClear();
-    mockWeatherApiProvider.searchCity.mockClear();
-    mockEmailingService.sendEmail.mockClear();
+    // Reset all mocks before each test
+    jest.clearAllMocks();
 
     await prisma.subscription.deleteMany();
     await prisma.city.deleteMany();
 
     // Clear Redis cache before each test
-    const cacheProvider = container.resolve<ICacheProvider>('CacheProvider');
+    const cacheProvider = testContainer.resolve<ICacheProvider>('CacheProvider');
     await cacheProvider.clear();
 
     // Setup mocks with default implementations
-    mockWeatherApiProvider.searchCity = jest.fn().mockResolvedValue([
+    mockWeatherProvider.searchCity = jest.fn().mockResolvedValue([
       {
         id: 123,
         name: 'Kyiv',
@@ -151,7 +85,7 @@ describe('App E2E Tests', () => {
       },
     ]);
 
-    mockWeatherApiProvider.getWeatherByCity = jest.fn().mockResolvedValue({
+    mockWeatherProvider.getWeatherByCity = jest.fn().mockResolvedValue({
       city: 'Kyiv',
       temperature: {
         c: 25,
@@ -269,7 +203,7 @@ describe('App E2E Tests', () => {
   describe('Error Handling', () => {
     it('should handle error scenarios gracefully', async () => {
       // Test invalid city search
-      mockWeatherApiProvider.searchCity = jest.fn().mockResolvedValue([]);
+      mockWeatherProvider.searchCity = jest.fn().mockResolvedValue([]);
 
       const subscribeResponse = await request(app).post('/api/subscribe').send({
         email: 'user@example.com',
@@ -280,7 +214,7 @@ describe('App E2E Tests', () => {
       expect(subscribeResponse.status).toBe(500);
 
       // Test weather API failures
-      mockWeatherApiProvider.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));
+      mockWeatherProvider.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));
 
       const weatherResponse = await request(app).get('/api/weather').query({ city: 'Kyiv' });
 
