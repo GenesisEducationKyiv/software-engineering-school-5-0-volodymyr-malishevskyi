@@ -1,4 +1,5 @@
-import { CityNotFoundError, OpenWeatherError } from './errors/openweather';
+import { OpenWeatherCityNotFoundError } from './errors/openweather';
+import { OpenWeatherError } from './errors/openweather';
 import { OpenWeatherMapProvider } from './openweather';
 
 const mockHttpClient = {
@@ -66,7 +67,7 @@ describe('OpenWeatherProvider', () => {
         }),
       });
 
-      await expect(openWeatherProvider.getWeatherByCity('InvalidCity')).rejects.toThrow(CityNotFoundError);
+      await expect(openWeatherProvider.getWeatherByCity('InvalidCity')).rejects.toThrow(OpenWeatherCityNotFoundError);
     });
 
     it('should handle non-JSON error response', async () => {

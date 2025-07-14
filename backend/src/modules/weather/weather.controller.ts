@@ -1,5 +1,6 @@
 import { HTTPBadRequestError, HTTPNotFoundError } from '@/common/errors/http-error';
-import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
+import { WeatherApiCityNotFoundError } from './weather-providers/weather-api/errors/weather-api';
+import { OpenWeatherCityNotFoundError } from './weather-providers/openweather/errors/openweather';
 import { NextFunction, Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
 import { z } from 'zod';
@@ -22,7 +23,7 @@ export class WeatherController {
       if (error instanceof z.ZodError) {
         return next(new HTTPBadRequestError('Invalid request'));
       }
-      if (error instanceof CityNotFoundError) {
+      if (error instanceof WeatherApiCityNotFoundError || error instanceof OpenWeatherCityNotFoundError) {
         return next(new HTTPNotFoundError('City not found'));
       }
       next(error);

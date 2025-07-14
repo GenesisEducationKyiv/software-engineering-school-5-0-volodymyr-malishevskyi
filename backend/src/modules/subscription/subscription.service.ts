@@ -1,9 +1,9 @@
 import { INotificationService } from '@/common/interfaces/notification-service';
+import { IWeatherProvider } from '@/common/interfaces/weather-provider';
 import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
-import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
-import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
 import { inject, injectable } from 'tsyringe';
-import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
+import { NotificationFailedError, TokenNotFoundError, WeatherServiceUnavailableError } from './application/errors';
+import { EmailAlreadyExistsError } from './domain/errors/subscription-domain-errors';
 import { ISubscriptionRepository } from './types/subscription-repository';
 
 /**
@@ -36,15 +36,22 @@ export class SubscriptionService {
     const existingSubscription = await this.subscriptionRepository.findByEmail(email);
 
     if (existingSubscription) {
-      throw new EmailAlreadySubscribed();
+      throw new EmailAlreadyExistsError(email);
     }
 
-    const cities = await this.weatherProvider.searchCity(city);
+    let mostRelevantCity;
+    try {
+      const cities = await this.weatherProvider.searchCity(city);
+      mostRelevantCity = cities[0];
 
-    const mostRelevantCity = cities[0];
-
-    if (!mostRelevantCity) {
-      throw new CityNotFoundError();
+      if (!mostRelevantCity) {
+        throw new WeatherServiceUnavailableError(city);
+      }
+    } catch (error) {
+      if (error instanceof WeatherServiceUnavailableError) {
+        throw error;
+      }
+      throw new WeatherServiceUnavailableError(city, error as Error);
     }
 
     const confirmationToken = generateConfirmationToken();
@@ -67,12 +74,16 @@ export class SubscriptionService {
       isConfirmed: false,
     });
 
-    await this.notificationService.sendSubscriptionConfirmation({
-      email,
-      confirmationUrl: `${this.config.appUrl}/api/confirm/${confirmationToken}`,
-      cityFullName: subscription.city.fullName,
-      frequency: subscription.frequency.toLowerCase(),
-    });
+    try {
+      await this.notificationService.sendSubscriptionConfirmation({
+        email,
+        confirmationUrl: `${this.config.appUrl}/api/confirm/${confirmationToken}`,
+        cityFullName: subscription.city.fullName,
+        frequency: subscription.frequency.toLowerCase(),
+      });
+    } catch (error) {
+      throw new NotificationFailedError(email, 'confirmation', error as Error);
+    }
   }
 
   /**
@@ -84,7 +95,7 @@ export class SubscriptionService {
     const subscription = await this.subscriptionRepository.findByConfirmationToken(token);
 
     if (!subscription) {
-      throw new TokenNotFound();
+      throw new TokenNotFoundError('confirmation');
     }
 
     await this.subscriptionRepository.updateByConfirmationToken(token, {
@@ -109,7 +120,7 @@ export class SubscriptionService {
     const subscription = await this.subscriptionRepository.findByRevokeToken(token);
 
     if (!subscription) {
-      throw new TokenNotFound();
+      throw new TokenNotFoundError('confirmation');
     }
 
     await this.subscriptionRepository.deleteByRevokeToken(token);

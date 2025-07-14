@@ -1,4 +1,5 @@
-import { CityNotFoundError, WeatherApiError } from './errors/weather-api';
+import { WeatherApiCityNotFoundError } from './errors/weather-api';
+import { WeatherApiError } from './errors/weather-api';
 import { WeatherApiProvider } from './weather-api';
 
 const mockHttpClient = {
@@ -61,7 +62,7 @@ describe('WeatherApiProvider', () => {
         'Content-Type': 'application/json',
       }),
     });
-    await expect(weatherApiProvider.getWeatherByCity('InvalidCity')).rejects.toThrow(CityNotFoundError);
+    await expect(weatherApiProvider.getWeatherByCity('InvalidCity')).rejects.toThrow(WeatherApiCityNotFoundError);
   });
 
   it('should handle non-JSON error response', async () => {

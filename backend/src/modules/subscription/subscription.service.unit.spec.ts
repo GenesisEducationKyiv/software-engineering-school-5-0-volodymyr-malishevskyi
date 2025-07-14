@@ -1,7 +1,8 @@
 import { INotificationService } from '@/common/interfaces/notification-service';
-import { City, IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
+import { City, IWeatherProvider } from '@/common/interfaces/weather-provider';
 import 'reflect-metadata';
-import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
+import { EmailAlreadyExistsError } from './domain/errors/subscription-domain-errors';
+import { TokenNotFoundError } from './application/errors';
 import { SubscriptionService } from './subscription.service';
 import { ISubscriptionRepository, SubscriptionWithCity } from './types/subscription-repository';
 
@@ -153,11 +154,11 @@ describe('SubscriptionService', () => {
       expect(createCall.revokeToken).toBe('revoke-token');
     });
 
-    it('should throw EmailAlreadySubscribed when email is already subscribed', async () => {
+    it('should throw EmailAlreadyExistsError when email is already subscribed', async () => {
       subscriptionRepositoryMock.findByEmail.mockResolvedValue(mockSubscription);
 
       await expect(subscriptionService.subscribe(mockEmail, mockCity, mockFrequency)).rejects.toThrow(
-        EmailAlreadySubscribed,
+        EmailAlreadyExistsError,
       );
       expect(subscriptionRepositoryMock.findByEmail).toHaveBeenCalledWith(mockEmail);
       expect(subscriptionRepositoryMock.create).not.toHaveBeenCalled();
@@ -259,10 +260,10 @@ describe('SubscriptionService', () => {
       });
     });
 
-    it('should throw TokenNotFound when confirmation token is invalid', async () => {
+    it('should throw TokenNotFoundError when confirmation token is invalid', async () => {
       subscriptionRepositoryMock.findByConfirmationToken.mockResolvedValue(null);
 
-      await expect(subscriptionService.confirmSubscription('invalid-token')).rejects.toThrow(TokenNotFound);
+      await expect(subscriptionService.confirmSubscription('invalid-token')).rejects.toThrow(TokenNotFoundError);
       expect(subscriptionRepositoryMock.updateByConfirmationToken).not.toHaveBeenCalled();
       expect(notificationServiceMock.sendSubscriptionConfirmed).not.toHaveBeenCalled();
     });
@@ -297,10 +298,10 @@ describe('SubscriptionService', () => {
       });
     });
 
-    it('should throw TokenNotFound when revoke token is invalid', async () => {
+    it('should throw TokenNotFoundError when revoke token is invalid', async () => {
       subscriptionRepositoryMock.findByRevokeToken.mockResolvedValue(null);
 
-      await expect(subscriptionService.unsubscribe('invalid-token')).rejects.toThrow(TokenNotFound);
+      await expect(subscriptionService.unsubscribe('invalid-token')).rejects.toThrow(TokenNotFoundError);
       expect(subscriptionRepositoryMock.deleteByRevokeToken).not.toHaveBeenCalled();
       expect(notificationServiceMock.sendSubscriptionCancellation).not.toHaveBeenCalled();
     });

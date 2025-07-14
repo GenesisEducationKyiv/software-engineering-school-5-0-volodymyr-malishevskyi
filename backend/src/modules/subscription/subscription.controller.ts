@@ -1,11 +1,12 @@
-import { injectable, inject } from 'tsyringe';
-import { HTTPBadRequestError, HTTPNotFoundError } from '@/common/errors/http-error';
 import { EmailDeliveryError } from '@/common/errors/email-errors';
+import { HTTPBadRequestError, HTTPNotFoundError, HTTPInternalServerError } from '@/common/errors/http-error';
+import logger from '@/common/logging/logger';
 import { NextFunction, Request, Response } from 'express';
+import { inject, injectable } from 'tsyringe';
 import { z } from 'zod';
-import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
+import { EmailAlreadyExistsError } from './domain/errors/subscription-domain-errors';
+import { TokenNotFoundError, WeatherServiceUnavailableError, NotificationFailedError } from './application/errors';
 import { ISubscriptionService } from './types/subscription-service';
-import logger from '@/common/services/logger';
 
 @injectable()
 export class SubscriptionController {
@@ -30,8 +31,28 @@ export class SubscriptionController {
       if (error instanceof z.ZodError) {
         return next(new HTTPBadRequestError('Invalid request'));
       }
-      if (error instanceof EmailAlreadySubscribed) {
+      if (error instanceof EmailAlreadyExistsError) {
         return next(new HTTPBadRequestError('Email already subscribed'));
+      }
+      if (error instanceof WeatherServiceUnavailableError) {
+        logger.error('Weather service unavailable during subscription', {
+          type: 'application',
+          endpoint: '/api/subscribe',
+          city: req.body?.city,
+          error: error.message,
+          correlationId: error.correlationId,
+        });
+        return next(new HTTPBadRequestError('City not found or weather service unavailable'));
+      }
+      if (error instanceof NotificationFailedError) {
+        logger.error('Notification failed during subscription', {
+          type: 'application',
+          endpoint: '/api/subscribe',
+          email: req.body?.email,
+          error: error.message,
+          correlationId: error.correlationId,
+        });
+        return next(new HTTPInternalServerError('Failed to send confirmation email'));
       }
       if (error instanceof EmailDeliveryError) {
         // SMTP помилки = server error, не client error
@@ -57,7 +78,7 @@ export class SubscriptionController {
       if (error instanceof z.ZodError) {
         return next(new HTTPBadRequestError('Invalid request'));
       }
-      if (error instanceof TokenNotFound) {
+      if (error instanceof TokenNotFoundError) {
         return next(new HTTPNotFoundError(error.message));
       }
       if (error instanceof EmailDeliveryError) {
@@ -82,7 +103,7 @@ export class SubscriptionController {
       if (error instanceof z.ZodError) {
         return next(new HTTPBadRequestError('Invalid token'));
       }
-      if (error instanceof TokenNotFound) {
+      if (error instanceof TokenNotFoundError) {
         return next(new HTTPNotFoundError(error.message));
       }
       if (error instanceof EmailDeliveryError) {

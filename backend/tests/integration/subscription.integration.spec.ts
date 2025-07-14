@@ -164,7 +164,7 @@ describe('Subscription Integration Tests', () => {
       expect(response.body).toHaveProperty('message', 'Email already subscribed');
     });
 
-    it('should return 500 when search city fails', async () => {
+    it('should return 400 when search city fails', async () => {
       // Arrange
       mockWeatherProvider.searchCity = jest.fn().mockRejectedValue(new Error('External API error'));
 
@@ -172,7 +172,7 @@ describe('Subscription Integration Tests', () => {
       const response = await request(app).post('/api/subscribe').send(validSubscriptionData);
 
       // Assert
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
     });
   });
 

@@ -1,4 +1,4 @@
-import { City } from '@/modules/weather/weather-providers/types/weather-provider';
+import { City } from '@/common/interfaces/weather-provider';
 
 export interface WeatherResponse {
   location: {
@@ -59,4 +59,5 @@ export interface ErrorResponse {
 
 export enum ErrorCode {
   CITY_NOT_FOUND = 1006,
+  INVALID_API_KEY = 2006,
 }

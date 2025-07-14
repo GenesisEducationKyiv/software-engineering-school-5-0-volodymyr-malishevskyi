@@ -211,7 +211,7 @@ describe('App E2E Tests', () => {
         frequency: 'daily',
       });
 
-      expect(subscribeResponse.status).toBe(500);
+      expect(subscribeResponse.status).toBe(400);
 
       // Test weather API failures
       mockWeatherProvider.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));

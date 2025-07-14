@@ -1,6 +1,7 @@
+import { OpenWeatherCityNotFoundError } from './errors/openweather';
 import { HttpClient, HttpResponse } from '@/common/http-client';
-import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/types/weather-provider';
-import { CityNotFoundError, OpenWeatherError } from './errors/openweather';
+import { City, IWeatherProvider, Weather } from '@/common/interfaces/weather-provider';
+import { OpenWeatherError } from './errors/openweather';
 import { OpenWeatherErrorResponse, OpenWeatherResponse, OpenWeatherSearchResponse } from './types/openweather';
 
 const BASE_URL = 'https://api.openweathermap.org';
@@ -90,7 +91,8 @@ export class OpenWeatherMapProvider implements IWeatherProvider {
 
     // OpenWeather returns 404 for city not found
     if (response.status === 404 || errorData.cod === '404') {
-      throw new CityNotFoundError();
+      // Convert provider-specific error to generic error for consumers
+      throw new OpenWeatherCityNotFoundError();
     }
 
     throw new OpenWeatherError(errorData.message || 'Unknown error from OpenWeather API', errorData.cod);

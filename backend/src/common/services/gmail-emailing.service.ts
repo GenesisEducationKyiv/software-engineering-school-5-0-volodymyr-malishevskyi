@@ -1,8 +1,8 @@
-import { injectable, inject } from 'tsyringe';
 import nodemailer, { Transporter } from 'nodemailer';
-import { EmailOptions, IEmailingService } from '../interfaces/emailing-service';
+import { inject, injectable } from 'tsyringe';
 import { EmailDeliveryError } from '../errors/email-errors';
-import logger from './logger';
+import { EmailOptions, IEmailingService } from '../interfaces/emailing-service';
+import logger from '../logging/logger';
 
 export type GmailEmailingServiceConfig = {
   user: string;
@@ -55,7 +55,8 @@ export class GmailEmailingService implements IEmailingService {
       // Throw typed domain error for upper layers
       throw new EmailDeliveryError(
         error instanceof Error ? error.message : 'Unknown SMTP error',
-        error instanceof Error ? error : undefined,
+        options.to, // recipient
+        error instanceof Error ? error : undefined, // cause
       );
     }
   }

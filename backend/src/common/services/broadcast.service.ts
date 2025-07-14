@@ -1,10 +1,10 @@
-import { injectable, inject } from 'tsyringe';
-import { WeatherService } from '@/modules/weather/weather.service';
 import { ISubscriptionRepository } from '@/modules/subscription/types/subscription-repository';
+import { WeatherService } from '@/modules/weather/weather.service';
+import { inject, injectable } from 'tsyringe';
 import { IBroadcastService } from '../interfaces/broadcast-service';
 import { INotificationService } from '../interfaces/notification-service';
+import logger from '../logging/logger';
 import delay from '../utils/delay';
-import logger from './logger';
 
 @injectable()
 export class BroadcastService implements IBroadcastService {

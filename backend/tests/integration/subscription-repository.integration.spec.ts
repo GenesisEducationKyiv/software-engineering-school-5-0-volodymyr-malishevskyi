@@ -1,4 +1,4 @@
-import SubscriptionRepository from '@/modules/subscription/repository/subscription';
+import SubscriptionRepository from '@/modules/subscription/repository/subscription.repository';
 import { PrismaClient, SubscriptionFrequency } from '@prisma/client';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 

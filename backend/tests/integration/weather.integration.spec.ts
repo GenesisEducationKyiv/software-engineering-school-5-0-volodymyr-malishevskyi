@@ -4,7 +4,7 @@ import { createApp } from '@/app';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
 import { Weather } from '@/modules/weather/weather-providers/types/weather-provider';
-import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
+import { WeatherApiCityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DependencyContainer } from 'tsyringe';
@@ -118,7 +118,7 @@ describe('Weather Integration Tests', () => {
 
     it('should return 404 Not Found when city is not found', async () => {
       // Arrange
-      mockWeatherProvider.getWeatherByCity.mockRejectedValue(new CityNotFoundError());
+      mockWeatherProvider.getWeatherByCity.mockRejectedValue(new WeatherApiCityNotFoundError());
 
       // Act
       const response = await request(app).get('/api/weather').query({ city: 'NonexistentCity' });

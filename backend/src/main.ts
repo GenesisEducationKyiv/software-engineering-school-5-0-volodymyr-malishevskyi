@@ -1,7 +1,7 @@
 import 'module-alias/register';
 import 'reflect-metadata';
 
-import logger from '@/common/services/logger';
+import logger from '@/common/logging/logger';
 import { type Config } from '@/config';
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';

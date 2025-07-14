@@ -1,6 +1,6 @@
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { MetricsService } from '@/common/metrics/metrics.service';
-import { GmailEmailingService } from '@/common/services/gmail-emailing';
+import { GmailEmailingService } from '@/common/services/gmail-emailing.service';
 import { ISubscriptionRepository } from '@/modules/subscription/types/subscription-repository';
 import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
 

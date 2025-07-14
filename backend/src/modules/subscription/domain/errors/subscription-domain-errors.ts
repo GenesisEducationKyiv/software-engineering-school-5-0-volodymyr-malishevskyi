@@ -1,77 +1,75 @@
-/**
- * Base domain error for subscription module
- */
-export abstract class SubscriptionDomainError extends Error {
-  abstract readonly code: string;
+import { DomainError, ErrorContext } from '@/common/errors/base';
 
-  constructor(message: string) {
-    super(message);
-    this.name = this.constructor.name;
-  }
-}
+/**
+ * Subscription domain error codes
+ */
+export const SubscriptionDomainErrorCodes = {
+  EMAIL_ALREADY_EXISTS: 'SUBSCRIPTION_EMAIL_ALREADY_EXISTS',
+  INVALID_EMAIL: 'SUBSCRIPTION_INVALID_EMAIL',
+  INVALID_TOKEN: 'SUBSCRIPTION_INVALID_TOKEN',
+  ALREADY_CONFIRMED: 'SUBSCRIPTION_ALREADY_CONFIRMED',
+  INVALID_FREQUENCY: 'SUBSCRIPTION_INVALID_FREQUENCY',
+} as const;
 
 /**
  * Email already exists in the system
  */
-export class EmailAlreadyExistsError extends SubscriptionDomainError {
-  readonly code = 'EMAIL_ALREADY_EXISTS';
+export class EmailAlreadyExistsError extends DomainError {
+  readonly code = SubscriptionDomainErrorCodes.EMAIL_ALREADY_EXISTS;
 
-  constructor(email: string) {
-    super(`Email ${email} is already subscribed`);
+  constructor(email: string, context?: ErrorContext) {
+    super(`Email ${email} is already subscribed`, {
+      context: { email, ...context },
+    });
   }
 }
 
 /**
  * Invalid email format
  */
-export class InvalidEmailError extends SubscriptionDomainError {
-  readonly code = 'INVALID_EMAIL';
+export class InvalidEmailError extends DomainError {
+  readonly code = SubscriptionDomainErrorCodes.INVALID_EMAIL;
 
-  constructor(email: string) {
-    super(`Invalid email format: ${email}`);
+  constructor(email: string, context?: ErrorContext) {
+    super(`Invalid email format: ${email}`, {
+      context: { email, ...context },
+    });
   }
 }
 
 /**
  * Subscription token not found or invalid
  */
-export class InvalidTokenError extends SubscriptionDomainError {
-  readonly code = 'INVALID_TOKEN';
+export class InvalidTokenError extends DomainError {
+  readonly code = SubscriptionDomainErrorCodes.INVALID_TOKEN;
 
-  constructor(tokenType: 'confirmation' | 'revoke') {
-    super(`Invalid or expired ${tokenType} token`);
+  constructor(tokenType: 'confirmation' | 'revoke', context?: ErrorContext) {
+    super(`Invalid or expired ${tokenType} token`, {
+      context: { tokenType, ...context },
+    });
   }
 }
 
 /**
  * Subscription already confirmed
  */
-export class SubscriptionAlreadyConfirmedError extends SubscriptionDomainError {
-  readonly code = 'ALREADY_CONFIRMED';
+export class SubscriptionAlreadyConfirmedError extends DomainError {
+  readonly code = SubscriptionDomainErrorCodes.ALREADY_CONFIRMED;
 
-  constructor() {
-    super('Subscription is already confirmed');
-  }
-}
-
-/**
- * City not found in external weather API
- */
-export class CityNotFoundError extends SubscriptionDomainError {
-  readonly code = 'CITY_NOT_FOUND';
-
-  constructor(cityName: string) {
-    super(`City not found: ${cityName}`);
+  constructor(context?: ErrorContext) {
+    super('Subscription is already confirmed', { context });
   }
 }
 
 /**
  * Invalid subscription frequency
  */
-export class InvalidFrequencyError extends SubscriptionDomainError {
-  readonly code = 'INVALID_FREQUENCY';
+export class InvalidFrequencyError extends DomainError {
+  readonly code = SubscriptionDomainErrorCodes.INVALID_FREQUENCY;
 
-  constructor(frequency: string) {
-    super(`Invalid subscription frequency: ${frequency}. Must be 'daily' or 'hourly'`);
+  constructor(frequency: string, context?: ErrorContext) {
+    super(`Invalid subscription frequency: ${frequency}. Must be 'daily' or 'hourly'`, {
+      context: { frequency, validFrequencies: ['daily', 'hourly'], ...context },
+    });
   }
 }
