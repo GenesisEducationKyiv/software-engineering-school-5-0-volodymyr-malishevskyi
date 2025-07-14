@@ -17,7 +17,7 @@ To run E2E test, in root folder run a single command, that will automatically up
 
 ## Running Backend Tests
 
-For run all test (unit, integration, and e2e) use a single command:
+For run all functional test (unit, integration, and e2e) and architecture tests use a single command:
 
 ```bash
 ./backend/run-tests.sh
