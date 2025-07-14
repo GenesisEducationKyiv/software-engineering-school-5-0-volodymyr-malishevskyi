@@ -85,7 +85,7 @@ export function initializeDI(config: Config): void {
 
   // Weather module
   container.registerSingleton('WeatherService', WeatherService);
-  container.registerSingleton('CachedWeatherService', CachedWeatherProvider);
+  container.registerSingleton('CachedWeatherProvider', CachedWeatherProvider);
   container.registerSingleton('WeatherController', WeatherController);
 
   // Subscription module
