@@ -44,6 +44,17 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   weather_db_data:
