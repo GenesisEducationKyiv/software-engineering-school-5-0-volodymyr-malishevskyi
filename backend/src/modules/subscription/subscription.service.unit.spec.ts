@@ -1,5 +1,4 @@
-import { IEmailingService } from '@/common/interfaces/emailing-service';
-import { IEmailTemplateService } from '@/common/interfaces/email-template-service';
+import { INotificationService } from '@/common/interfaces/notification-service';
 import { City, IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
 import 'reflect-metadata';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
@@ -15,8 +14,7 @@ jest.mock('@/common/utils/token-generator', () => ({
 describe('SubscriptionService', () => {
   let subscriptionRepositoryMock: jest.Mocked<ISubscriptionRepository>;
   let weatherApiServiceMock: jest.Mocked<IWeatherProvider>;
-  let emailingServiceMock: jest.Mocked<IEmailingService>;
-  let emailTemplateServiceMock: jest.Mocked<IEmailTemplateService>;
+  let notificationServiceMock: jest.Mocked<INotificationService>;
   let configMock: { appUrl: string };
   let subscriptionService: SubscriptionService;
 
@@ -64,6 +62,7 @@ describe('SubscriptionService', () => {
       findByEmail: jest.fn(),
       findByRevokeToken: jest.fn(),
       findByConfirmationToken: jest.fn(),
+      findConfirmedByFrequency: jest.fn(),
       create: jest.fn(),
       updateByConfirmationToken: jest.fn(),
       deleteByRevokeToken: jest.fn(),
@@ -74,15 +73,13 @@ describe('SubscriptionService', () => {
       searchCity: jest.fn(),
     } as jest.Mocked<IWeatherProvider>;
 
-    emailingServiceMock = {
-      sendEmail: jest.fn(),
-    } as jest.Mocked<IEmailingService>;
-
-    emailTemplateServiceMock = {
-      getSubscriptionConfirmationTemplate: jest.fn(),
-      getSubscriptionConfirmedTemplate: jest.fn(),
-      getSubscriptionCancelledTemplate: jest.fn(),
-    } as jest.Mocked<IEmailTemplateService>;
+    notificationServiceMock = {
+      sendWeatherNotification: jest.fn(),
+      sendSubscriptionConfirmation: jest.fn(),
+      sendSubscriptionConfirmed: jest.fn(),
+      sendSubscriptionCancellation: jest.fn(),
+      broadcast: jest.fn(),
+    } as jest.Mocked<INotificationService>;
 
     configMock = { appUrl: 'https://example.com' };
 
@@ -91,15 +88,10 @@ describe('SubscriptionService', () => {
     tokenGenerator.generateConfirmationToken.mockReturnValue('confirmation-token');
     tokenGenerator.generateRevokeToken.mockReturnValue('revoke-token');
 
-    emailTemplateServiceMock.getSubscriptionConfirmationTemplate.mockReturnValue('<html>confirmation</html>');
-    emailTemplateServiceMock.getSubscriptionConfirmedTemplate.mockReturnValue('<html>confirmed</html>');
-    emailTemplateServiceMock.getSubscriptionCancelledTemplate.mockReturnValue('<html>cancelled</html>');
-
     subscriptionService = new SubscriptionService(
       subscriptionRepositoryMock,
       weatherApiServiceMock,
-      emailingServiceMock,
-      emailTemplateServiceMock,
+      notificationServiceMock,
       configMock,
     );
 
@@ -134,15 +126,11 @@ describe('SubscriptionService', () => {
           }),
         }),
       );
-      expect(emailTemplateServiceMock.getSubscriptionConfirmationTemplate).toHaveBeenCalledWith({
+      expect(notificationServiceMock.sendSubscriptionConfirmation).toHaveBeenCalledWith({
+        email: mockEmail,
         confirmationUrl: `${configMock.appUrl}/api/confirm/confirmation-token`,
         cityFullName: mockSubscription.city.fullName,
         frequency: mockFrequency,
-      });
-      expect(emailingServiceMock.sendEmail).toHaveBeenCalledWith({
-        to: mockEmail,
-        subject: 'Weather Subscription Confirmation',
-        html: '<html>confirmation</html>',
       });
     });
 
@@ -173,7 +161,7 @@ describe('SubscriptionService', () => {
       );
       expect(subscriptionRepositoryMock.findByEmail).toHaveBeenCalledWith(mockEmail);
       expect(subscriptionRepositoryMock.create).not.toHaveBeenCalled();
-      expect(emailingServiceMock.sendEmail).not.toHaveBeenCalled();
+      expect(notificationServiceMock.sendSubscriptionConfirmation).not.toHaveBeenCalled();
     });
 
     it('should use the most relevant city from search results', async () => {
@@ -235,7 +223,7 @@ describe('SubscriptionService', () => {
 
       await expect(subscriptionService.subscribe(mockEmail, 'NonExistentCity', mockFrequency)).rejects.toThrow();
       expect(subscriptionRepositoryMock.create).not.toHaveBeenCalled();
-      expect(emailingServiceMock.sendEmail).not.toHaveBeenCalled();
+      expect(notificationServiceMock.sendSubscriptionConfirmation).not.toHaveBeenCalled();
     });
   });
 
@@ -250,15 +238,11 @@ describe('SubscriptionService', () => {
         isConfirmed: true,
         confirmationToken: null,
       });
-      expect(emailTemplateServiceMock.getSubscriptionConfirmedTemplate).toHaveBeenCalledWith({
+      expect(notificationServiceMock.sendSubscriptionConfirmed).toHaveBeenCalledWith({
+        email: mockSubscription.email,
         cityFullName: mockSubscription.city.fullName,
         frequency: mockSubscription.frequency.toLowerCase(),
         unsubscribeUrl: `${configMock.appUrl}/api/unsubscribe/${mockSubscription.revokeToken}`,
-      });
-      expect(emailingServiceMock.sendEmail).toHaveBeenCalledWith({
-        to: mockSubscription.email,
-        subject: 'Weather Subscription Successfully Confirmed!',
-        html: '<html>confirmed</html>',
       });
     });
 
@@ -267,7 +251,8 @@ describe('SubscriptionService', () => {
 
       await subscriptionService.confirmSubscription(mockToken);
 
-      expect(emailTemplateServiceMock.getSubscriptionConfirmedTemplate).toHaveBeenCalledWith({
+      expect(notificationServiceMock.sendSubscriptionConfirmed).toHaveBeenCalledWith({
+        email: mockSubscription.email,
         cityFullName: mockSubscription.city.fullName,
         frequency: mockSubscription.frequency.toLowerCase(),
         unsubscribeUrl: `${configMock.appUrl}/api/unsubscribe/${mockSubscription.revokeToken}`,
@@ -279,7 +264,7 @@ describe('SubscriptionService', () => {
 
       await expect(subscriptionService.confirmSubscription('invalid-token')).rejects.toThrow(TokenNotFound);
       expect(subscriptionRepositoryMock.updateByConfirmationToken).not.toHaveBeenCalled();
-      expect(emailingServiceMock.sendEmail).not.toHaveBeenCalled();
+      expect(notificationServiceMock.sendSubscriptionConfirmed).not.toHaveBeenCalled();
     });
   });
 
@@ -292,14 +277,10 @@ describe('SubscriptionService', () => {
 
       expect(subscriptionRepositoryMock.findByRevokeToken).toHaveBeenCalledWith(revokeToken);
       expect(subscriptionRepositoryMock.deleteByRevokeToken).toHaveBeenCalledWith(revokeToken);
-      expect(emailTemplateServiceMock.getSubscriptionCancelledTemplate).toHaveBeenCalledWith({
+      expect(notificationServiceMock.sendSubscriptionCancellation).toHaveBeenCalledWith({
+        email: mockSubscription.email,
         cityFullName: mockSubscription.city.fullName,
         frequency: mockSubscription.frequency.toLowerCase(),
-      });
-      expect(emailingServiceMock.sendEmail).toHaveBeenCalledWith({
-        to: mockSubscription.email,
-        subject: 'Weather Subscription Cancelled',
-        html: '<html>cancelled</html>',
       });
     });
 
@@ -309,7 +290,8 @@ describe('SubscriptionService', () => {
 
       await subscriptionService.unsubscribe(revokeToken);
 
-      expect(emailTemplateServiceMock.getSubscriptionCancelledTemplate).toHaveBeenCalledWith({
+      expect(notificationServiceMock.sendSubscriptionCancellation).toHaveBeenCalledWith({
+        email: mockSubscription.email,
         cityFullName: mockSubscription.city.fullName,
         frequency: mockSubscription.frequency.toLowerCase(),
       });
@@ -320,7 +302,7 @@ describe('SubscriptionService', () => {
 
       await expect(subscriptionService.unsubscribe('invalid-token')).rejects.toThrow(TokenNotFound);
       expect(subscriptionRepositoryMock.deleteByRevokeToken).not.toHaveBeenCalled();
-      expect(emailingServiceMock.sendEmail).not.toHaveBeenCalled();
+      expect(notificationServiceMock.sendSubscriptionCancellation).not.toHaveBeenCalled();
     });
   });
 });

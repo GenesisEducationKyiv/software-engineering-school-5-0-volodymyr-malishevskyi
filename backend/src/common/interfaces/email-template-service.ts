@@ -15,8 +15,20 @@ export interface SubscriptionCancelledData {
   frequency: string;
 }
 
+export interface WeatherUpdateData {
+  cityFullName: string;
+  temperature: number;
+  humidity: number;
+}
+
+export interface EmailTemplate {
+  subject: string;
+  html: string;
+}
+
 export interface IEmailTemplateService {
-  getSubscriptionConfirmationTemplate(data: SubscriptionConfirmationData): string;
-  getSubscriptionConfirmedTemplate(data: SubscriptionConfirmedData): string;
-  getSubscriptionCancelledTemplate(data: SubscriptionCancelledData): string;
+  getSubscriptionConfirmationEmail(data: SubscriptionConfirmationData): EmailTemplate;
+  getSubscriptionConfirmedEmail(data: SubscriptionConfirmedData): EmailTemplate;
+  getSubscriptionCancelledEmail(data: SubscriptionCancelledData): EmailTemplate;
+  getWeatherUpdateEmail(data: WeatherUpdateData): EmailTemplate;
 }

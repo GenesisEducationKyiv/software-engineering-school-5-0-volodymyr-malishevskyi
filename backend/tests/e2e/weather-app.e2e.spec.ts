@@ -10,6 +10,7 @@ import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provide
 import { MetricsService } from '@/common/metrics/metrics.service';
 import { EmailTemplateService } from '@/common/services/email-template-service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
+import { NotificationService } from '@/common/services/notification';
 import { container } from '@/container';
 import SubscriptionRepository from '@/modules/subscription/repository/subscription';
 import { SubscriptionController } from '@/modules/subscription/subscription.controller';
@@ -74,6 +75,9 @@ describe('App E2E Tests', () => {
 
     // Register real EmailTemplateService for full integration testing
     container.registerSingleton('EmailTemplateService', EmailTemplateService);
+
+    // Register NotificationService as singleton (depends on EmailingService and EmailTemplateService)
+    container.registerSingleton('NotificationService', NotificationService);
 
     // Register dependencies for CachedWeatherProvider
     container.registerInstance('WeatherProvider', mockWeatherApiProvider);

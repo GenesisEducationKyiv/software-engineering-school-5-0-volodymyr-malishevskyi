@@ -5,7 +5,9 @@ const config = ConfigFactory.createTestConfig();
 import { createApp } from '@/app';
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { MetricsService } from '@/common/metrics/metrics.service';
+import { EmailTemplateService } from '@/common/services/email-template-service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
+import { NotificationService } from '@/common/services/notification';
 import { container } from '@/container';
 import { SubscriptionRepository } from '@/modules/subscription';
 import { SubscriptionController } from '@/modules/subscription/subscription.controller';
@@ -28,12 +30,6 @@ jest.mock('@/common/utils/token-generator', () => ({
   generateRevokeToken: jest.fn().mockReturnValue('test-revoke-token'),
   generateToken: jest.fn().mockReturnValue('test-token'),
 }));
-
-const mockEmailTemplateService = {
-  getSubscriptionConfirmationTemplate: jest.fn().mockReturnValue('<html>confirmation</html>'),
-  getSubscriptionConfirmedTemplate: jest.fn().mockReturnValue('<html>confirmed</html>'),
-  getSubscriptionCancelledTemplate: jest.fn().mockReturnValue('<html>cancelled</html>'),
-};
 
 const mockWeatherApiService = {
   getWeatherByCity: jest.fn(),
@@ -78,7 +74,12 @@ describe('Subscription Integration Tests', () => {
     // container.registerInstance('WeatherApiProvider', mockWeatherApiService);
     // container.registerInstance('OpenWeatherMapProvider', mockWeatherApiService);
     container.registerInstance('EmailingService', mockEmailingService);
-    container.registerInstance('EmailTemplateService', mockEmailTemplateService);
+
+    // Register EmailTemplateService
+    container.registerSingleton('EmailTemplateService', EmailTemplateService);
+
+    // Register NotificationService as singleton
+    container.registerSingleton('NotificationService', NotificationService);
 
     // Register dependencies for CachedWeatherProvider
     container.registerInstance('WeatherProvider', mockWeatherApiService);

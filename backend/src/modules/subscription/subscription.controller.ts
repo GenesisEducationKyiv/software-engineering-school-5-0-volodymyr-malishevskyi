@@ -1,9 +1,11 @@
 import { injectable, inject } from 'tsyringe';
 import { HTTPBadRequestError, HTTPNotFoundError } from '@/common/errors/http-error';
+import { EmailDeliveryError } from '@/common/errors/email-errors';
 import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { ISubscriptionService } from './types/subscription-service';
+import logger from '@/common/services/logger';
 
 @injectable()
 export class SubscriptionController {
@@ -31,6 +33,16 @@ export class SubscriptionController {
       if (error instanceof EmailAlreadySubscribed) {
         return next(new HTTPBadRequestError('Email already subscribed'));
       }
+      if (error instanceof EmailDeliveryError) {
+        // SMTP помилки = server error, не client error
+        logger.error('Email delivery failed', {
+          type: 'system',
+          endpoint: '/api/subscribe',
+          email: req.body?.email,
+          error: error.message,
+        });
+        return next(error); // 500 Internal Server Error
+      }
       next(error);
     }
   }
@@ -48,6 +60,14 @@ export class SubscriptionController {
       if (error instanceof TokenNotFound) {
         return next(new HTTPNotFoundError(error.message));
       }
+      if (error instanceof EmailDeliveryError) {
+        logger.error('Email delivery failed', {
+          type: 'system',
+          endpoint: '/api/confirm/:token',
+          error: error.message,
+        });
+        return next(error); // 500 Internal Server Error
+      }
       next(error);
     }
   }
@@ -64,6 +84,14 @@ export class SubscriptionController {
       }
       if (error instanceof TokenNotFound) {
         return next(new HTTPNotFoundError(error.message));
+      }
+      if (error instanceof EmailDeliveryError) {
+        logger.error('Email delivery failed', {
+          type: 'system',
+          endpoint: '/api/unsubscribe/:token',
+          error: error.message,
+        });
+        return next(error); // 500 Internal Server Error
       }
       next(error);
     }

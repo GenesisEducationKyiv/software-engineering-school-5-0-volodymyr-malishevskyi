@@ -40,6 +40,7 @@ export interface ISubscriptionRepository {
   findByEmail(email: string): Promise<SubscriptionWithCity | null>;
   findByRevokeToken(token: string): Promise<SubscriptionWithCity | null>;
   findByConfirmationToken(token: string): Promise<SubscriptionWithCity | null>;
+  findConfirmedByFrequency(frequency: 'daily' | 'hourly'): Promise<SubscriptionWithCity[]>;
   create(data: CreateSubscriptionData): Promise<SubscriptionWithCity>;
   updateByConfirmationToken(confirmationToken: string, data: Partial<Subscription>): Promise<Subscription>;
   deleteByRevokeToken(token: string): Promise<Subscription>;

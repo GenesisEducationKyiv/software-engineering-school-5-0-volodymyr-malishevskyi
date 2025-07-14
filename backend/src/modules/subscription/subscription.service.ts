@@ -1,5 +1,4 @@
-import { IEmailingService } from '@/common/interfaces/emailing-service';
-import { IEmailTemplateService } from '@/common/interfaces/email-template-service';
+import { INotificationService } from '@/common/interfaces/notification-service';
 import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
 import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
 import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
@@ -20,10 +19,8 @@ export class SubscriptionService {
     private subscriptionRepository: ISubscriptionRepository,
     @inject('CachedWeatherProvider')
     private weatherProvider: IWeatherProvider,
-    @inject('EmailingService')
-    private emailingService: IEmailingService,
-    @inject('EmailTemplateService')
-    private emailTemplateService: IEmailTemplateService,
+    @inject('NotificationService')
+    private notificationService: INotificationService,
     @inject('Config')
     private readonly config: { appUrl: string },
   ) {}
@@ -70,16 +67,11 @@ export class SubscriptionService {
       isConfirmed: false,
     });
 
-    const confirmationTemplate = this.emailTemplateService.getSubscriptionConfirmationTemplate({
+    await this.notificationService.sendSubscriptionConfirmation({
+      email,
       confirmationUrl: `${this.config.appUrl}/api/confirm/${confirmationToken}`,
       cityFullName: subscription.city.fullName,
       frequency: subscription.frequency.toLowerCase(),
-    });
-
-    this.emailingService.sendEmail({
-      to: email,
-      subject: 'Weather Subscription Confirmation',
-      html: confirmationTemplate,
     });
   }
 
@@ -100,16 +92,11 @@ export class SubscriptionService {
       confirmationToken: null,
     });
 
-    const confirmedTemplate = this.emailTemplateService.getSubscriptionConfirmedTemplate({
+    await this.notificationService.sendSubscriptionConfirmed({
+      email: subscription.email,
       cityFullName: subscription.city.fullName,
       frequency: subscription.frequency.toLowerCase(),
       unsubscribeUrl: `${this.config.appUrl}/api/unsubscribe/${subscription.revokeToken}`,
-    });
-
-    this.emailingService.sendEmail({
-      to: subscription.email,
-      subject: 'Weather Subscription Successfully Confirmed!',
-      html: confirmedTemplate,
     });
   }
 
@@ -127,15 +114,10 @@ export class SubscriptionService {
 
     await this.subscriptionRepository.deleteByRevokeToken(token);
 
-    const cancelledTemplate = this.emailTemplateService.getSubscriptionCancelledTemplate({
+    await this.notificationService.sendSubscriptionCancellation({
+      email: subscription.email,
       cityFullName: subscription.city.fullName,
       frequency: subscription.frequency.toLowerCase(),
-    });
-
-    this.emailingService.sendEmail({
-      to: subscription.email,
-      subject: 'Weather Subscription Cancelled',
-      html: cancelledTemplate,
     });
   }
 }

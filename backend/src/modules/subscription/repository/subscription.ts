@@ -71,6 +71,18 @@ export default class SubscriptionRepository implements ISubscriptionRepository {
     });
   }
 
+  async findConfirmedByFrequency(frequency: 'daily' | 'hourly') {
+    return await this.prisma.subscription.findMany({
+      where: {
+        isConfirmed: true,
+        frequency,
+      },
+      include: {
+        city: true,
+      },
+    });
+  }
+
   async deleteByRevokeToken(revokeToken: string) {
     return await this.prisma.subscription.delete({
       where: {

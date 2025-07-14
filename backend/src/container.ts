@@ -7,7 +7,8 @@ import { FetchHttpClient } from '@/common/http-client';
 import { EmailTemplateService } from '@/common/services/email-template-service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
 import logger from '@/common/services/logger';
-import { WeatherBroadcastService } from '@/common/services/weather-broadcast';
+import { BroadcastService } from '@/common/services/broadcast';
+import { NotificationService } from '@/common/services/notification';
 import { Config } from '@/config';
 import { PrismaClientInstance } from '@/lib/prisma';
 import SubscriptionRepository from '@/modules/subscription/repository/subscription';
@@ -83,7 +84,8 @@ export function initializeDI(config: Config): void {
   // Business services
   container.registerSingleton('EmailingService', GmailEmailingService);
   container.registerSingleton('EmailTemplateService', EmailTemplateService);
-  container.registerSingleton('WeatherBroadcastService', WeatherBroadcastService);
+  container.registerSingleton('NotificationService', NotificationService);
+  container.registerSingleton('BroadcastService', BroadcastService);
 
   // Weather module
   container.registerSingleton('WeatherService', WeatherService);

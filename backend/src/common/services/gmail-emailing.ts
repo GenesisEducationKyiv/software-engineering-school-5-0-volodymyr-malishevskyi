@@ -1,6 +1,7 @@
 import { injectable, inject } from 'tsyringe';
 import nodemailer, { Transporter } from 'nodemailer';
 import { EmailOptions, IEmailingService } from '../interfaces/emailing-service';
+import { EmailDeliveryError } from '../errors/email-errors';
 import logger from './logger';
 
 export type GmailEmailingServiceConfig = {
@@ -32,19 +33,30 @@ export class GmailEmailingService implements IEmailingService {
     try {
       const info = await this.transporter.sendMail(options);
       logger.info('Email sent successfully', {
-        type: 'external',
+        type: 'infrastructure',
+        service: 'gmail_smtp',
         to: options.to,
         subject: options.subject,
+        messageId: info.messageId,
         response: info.response,
       });
     } catch (error) {
-      logger.error('Failed to send email', {
-        type: 'external',
+      // Infrastructure-level error logging with technical details
+      logger.error('SMTP email delivery failed', {
+        type: 'infrastructure',
+        service: 'gmail_smtp',
         to: options.to,
         subject: options.subject,
         error: error instanceof Error ? error.message : String(error),
+        code: error instanceof Error && 'code' in error ? error.code : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
       });
-      throw new Error('Failed to send email');
+
+      // Throw typed domain error for upper layers
+      throw new EmailDeliveryError(
+        error instanceof Error ? error.message : 'Unknown SMTP error',
+        error instanceof Error ? error : undefined,
+      );
     }
   }
 }
