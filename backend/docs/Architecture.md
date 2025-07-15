@@ -17,21 +17,22 @@ flowchart TD
     subgraph PL["Presentation Layer"]
         WeatherRouter[WeatherRouter]
         SubscriptionRouter[SubscriptionRouter]
+        WeatherController[WeatherController]
+        SubscriptionController[SubscriptionController]
     end
 
     %% Application Layer
     subgraph AL["Application Layer"]
-        WeatherController[WeatherController]
-        SubscriptionController[SubscriptionController]
         BroadcastService[BroadcastService]
-    end
-
-    %% Business Layer
-    subgraph BL["Business Layer"]
         WeatherService[WeatherService]
         SubscriptionService[SubscriptionService]
         NotificationService[NotificationService]
         EmailTemplateService[EmailTemplateService]
+    end
+
+    %% Business Layer
+    subgraph DL["Domain Layer"]
+        Subscription
     end
 
     %% Infrastructure Layer
@@ -45,7 +46,7 @@ flowchart TD
     end
 
     %% Data Layer
-    subgraph DL["Data Layer"]
+    subgraph DBL["Data Layer"]
         Redis[(Redis Cache)]
         PostgreSQL[(PostgreSQL Database)]
     end
@@ -72,6 +73,7 @@ flowchart TD
     SubscriptionService --> SubscriptionRepository
     SubscriptionService --> CachedWeatherProvider
     SubscriptionService --> NotificationService
+    SubscriptionService --> Subscription
     SubscriptionRepository --> PostgreSQL
 
     %% Broadcast flow
@@ -83,5 +85,5 @@ flowchart TD
     NotificationService --> EmailTemplateService
     NotificationService --> GmailEmailingService
 
-    EL ~~~ PL ~~~ AL ~~~ BL ~~~ IL ~~~ DL
+    PL ~~~ AL ~~~ DL ~~~ IL ~~~ DBL ~~~ EL
 ```
