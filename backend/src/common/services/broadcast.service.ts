@@ -1,4 +1,4 @@
-import { ISubscriptionRepository } from '@/modules/subscription/types/subscription-repository';
+import { ISubscriptionRepository } from '@/modules/subscription/domain/interfaces/subscription.repository';
 import { WeatherService } from '@/modules/weather/weather.service';
 import { inject, injectable } from 'tsyringe';
 import { IBroadcastService } from '../interfaces/broadcast-service';

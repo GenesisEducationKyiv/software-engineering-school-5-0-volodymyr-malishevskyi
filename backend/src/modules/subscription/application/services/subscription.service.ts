@@ -2,9 +2,14 @@ import { INotificationService } from '@/common/interfaces/notification-service';
 import { IWeatherProvider } from '@/common/interfaces/weather-provider';
 import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
 import { inject, injectable } from 'tsyringe';
-import { NotificationFailedError, TokenNotFoundError, WeatherServiceUnavailableError } from './application/errors';
-import { EmailAlreadyExistsError } from './domain/errors/subscription-domain-errors';
-import { ISubscriptionRepository } from './types/subscription-repository';
+import { Subscription } from '../../domain/entities/subscription';
+import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';
+import { ISubscriptionRepository } from '../../domain/interfaces/subscription.repository';
+import {
+  NotificationFailedError,
+  TokenNotFoundError,
+  WeatherServiceUnavailableError,
+} from '../errors/subscription.service';
 
 /**
  * Subscription Service
@@ -57,22 +62,23 @@ export class SubscriptionService {
     const confirmationToken = generateConfirmationToken();
     const revokeToken = generateRevokeToken();
 
-    const subscription = await this.subscriptionRepository.create({
-      email,
-      frequency,
-      confirmationToken,
-      revokeToken,
-      city: {
-        externalId: mostRelevantCity.id,
-        name: mostRelevantCity.name,
-        region: mostRelevantCity.region,
-        country: mostRelevantCity.country,
-        fullName: [mostRelevantCity.name, mostRelevantCity.region, mostRelevantCity.country].join(', '),
-        latitude: mostRelevantCity.lat,
-        longitude: mostRelevantCity.lon,
-      },
-      isConfirmed: false,
-    });
+    const subscription = await this.subscriptionRepository.save(
+      new Subscription({
+        email,
+        frequency,
+        confirmationToken,
+        revokeToken,
+        isConfirmed: false,
+        city: {
+          externalId: mostRelevantCity.id,
+          name: mostRelevantCity.name,
+          region: mostRelevantCity.region,
+          country: mostRelevantCity.country,
+          latitude: mostRelevantCity.lat,
+          longitude: mostRelevantCity.lon,
+        },
+      }),
+    );
 
     try {
       await this.notificationService.sendSubscriptionConfirmation({
@@ -98,10 +104,10 @@ export class SubscriptionService {
       throw new TokenNotFoundError('confirmation');
     }
 
-    await this.subscriptionRepository.updateByConfirmationToken(token, {
-      isConfirmed: true,
-      confirmationToken: null,
-    });
+    subscription.isConfirmed = true;
+    subscription.confirmationToken = null;
+
+    await this.subscriptionRepository.save(subscription);
 
     await this.notificationService.sendSubscriptionConfirmed({
       email: subscription.email,

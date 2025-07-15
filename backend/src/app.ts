@@ -5,7 +5,7 @@ import errorHandleMiddleware from './common/middlewares/error-handler';
 import requestLoggingMiddleware from './common/middlewares/request-logging';
 import { DependencyContainer } from './container';
 import { subscriptionRouterFactory } from './modules/subscription';
-import { SubscriptionController } from './modules/subscription/subscription.controller';
+import { SubscriptionController } from './modules/subscription/presentation/subscription.controller';
 import { weatherRouterFactory } from './modules/weather';
 import { WeatherController } from './modules/weather/weather.controller';
 

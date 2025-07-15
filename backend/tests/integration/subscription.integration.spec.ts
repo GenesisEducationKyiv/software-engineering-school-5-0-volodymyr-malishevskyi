@@ -1,13 +1,15 @@
+import 'reflect-metadata';
+
 import { createApp } from '@/app';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
 import { Weather } from '@/modules/weather/weather-providers/types/weather-provider';
 import { PrismaClient } from '@prisma/client';
-import { DependencyContainer } from 'tsyringe';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DependencyContainer } from 'tsyringe';
+import { mockCacheProvider, mockEmailingService, mockMetricsService, mockWeatherProvider } from '../helpers/mocks';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
-import { mockEmailingService, mockWeatherProvider, mockCacheProvider, mockMetricsService } from '../helpers/mocks';
 
 // Mock token generator utility
 jest.mock('@/common/utils/token-generator', () => ({
@@ -285,9 +287,11 @@ describe('Subscription Integration Tests', () => {
     });
 
     it('should return 500 for unexpected errors', async () => {
-      // Arrange - Force a database error by mocking the delete method
-      const originalDeleteMethod = prisma.subscription.delete;
-      prisma.subscription.delete = jest.fn().mockRejectedValue(new Error('Database error')) as jest.Mock;
+      // Arrange - Mock the repository method to throw an error
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const subscriptionRepository = testContainer.resolve('SubscriptionRepository') as any;
+      const originalDeleteMethod = subscriptionRepository.deleteByRevokeToken;
+      subscriptionRepository.deleteByRevokeToken = jest.fn().mockRejectedValue(new Error('Database error'));
 
       // Act
       const response = await request(app).get(`/api/unsubscribe/${revokeToken}`);
@@ -296,7 +300,7 @@ describe('Subscription Integration Tests', () => {
       expect(response.status).toBe(500);
 
       // Restore original method
-      prisma.subscription.delete = originalDeleteMethod;
+      subscriptionRepository.deleteByRevokeToken = originalDeleteMethod;
     });
   });
 });

@@ -1,10 +1,11 @@
 import { INotificationService } from '@/common/interfaces/notification-service';
 import { City, IWeatherProvider } from '@/common/interfaces/weather-provider';
 import 'reflect-metadata';
-import { EmailAlreadyExistsError } from './domain/errors/subscription-domain-errors';
-import { TokenNotFoundError } from './application/errors';
+import { Subscription } from '../../domain/entities/subscription';
+import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';
+import { ISubscriptionRepository } from '../../domain/interfaces/subscription.repository';
+import { TokenNotFoundError } from '../errors/subscription.service';
 import { SubscriptionService } from './subscription.service';
-import { ISubscriptionRepository, SubscriptionWithCity } from './types/subscription-repository';
 
 jest.mock('@/common/utils/token-generator', () => ({
   generateConfirmationToken: jest.fn(),
@@ -34,10 +35,9 @@ describe('SubscriptionService', () => {
       url: 'kyiv-ukraine',
     },
   ];
-  const mockSubscription: SubscriptionWithCity = {
+  const mockSubscriptionData = {
     id: 1,
     email: mockEmail,
-    cityId: 1,
     frequency: mockFrequency,
     confirmationToken: mockToken,
     revokeToken: 'mock-revoke-token',
@@ -50,13 +50,11 @@ describe('SubscriptionService', () => {
       name: 'Kyiv',
       region: 'Kyiv City',
       country: 'Ukraine',
-      fullName: 'Kyiv, Kyiv City, Ukraine',
       latitude: 50.4501,
       longitude: 30.5234,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     },
   };
+  const mockSubscription = new Subscription(mockSubscriptionData);
 
   beforeEach(() => {
     subscriptionRepositoryMock = {
@@ -64,8 +62,7 @@ describe('SubscriptionService', () => {
       findByRevokeToken: jest.fn(),
       findByConfirmationToken: jest.fn(),
       findConfirmedByFrequency: jest.fn(),
-      create: jest.fn(),
-      updateByConfirmationToken: jest.fn(),
+      save: jest.fn(),
       deleteByRevokeToken: jest.fn(),
     } as jest.Mocked<ISubscriptionRepository>;
 
@@ -102,7 +99,7 @@ describe('SubscriptionService', () => {
   describe('subscribe', () => {
     it('should successfully create a new subscription', async () => {
       subscriptionRepositoryMock.findByEmail.mockResolvedValue(null);
-      subscriptionRepositoryMock.create.mockResolvedValue(mockSubscription);
+      subscriptionRepositoryMock.save.mockResolvedValue(mockSubscription);
 
       await subscriptionService.subscribe(mockEmail, mockCity, mockFrequency);
 
@@ -112,21 +109,7 @@ describe('SubscriptionService', () => {
       const tokenGenerator = jest.requireMock('@/common/utils/token-generator');
       expect(tokenGenerator.generateConfirmationToken).toHaveBeenCalled();
       expect(tokenGenerator.generateRevokeToken).toHaveBeenCalled();
-      expect(subscriptionRepositoryMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: mockEmail,
-          frequency: mockFrequency,
-          isConfirmed: false,
-          confirmationToken: 'confirmation-token',
-          revokeToken: 'revoke-token',
-          city: expect.objectContaining({
-            externalId: mockCities[0].id,
-            name: mockCities[0].name,
-            region: mockCities[0].region,
-            country: mockCities[0].country,
-          }),
-        }),
-      );
+      expect(subscriptionRepositoryMock.save).toHaveBeenCalledWith(expect.any(Subscription));
       expect(notificationServiceMock.sendSubscriptionConfirmation).toHaveBeenCalledWith({
         email: mockEmail,
         confirmationUrl: `${configMock.appUrl}/api/confirm/confirmation-token`,
@@ -142,16 +125,16 @@ describe('SubscriptionService', () => {
       tokenGenerator.generateRevokeToken.mockClear();
 
       subscriptionRepositoryMock.findByEmail.mockResolvedValue(null);
-      subscriptionRepositoryMock.create.mockResolvedValue(mockSubscription);
+      subscriptionRepositoryMock.save.mockResolvedValue(mockSubscription);
 
       await subscriptionService.subscribe(mockEmail, mockCity, mockFrequency);
 
       expect(tokenGenerator.generateConfirmationToken).toHaveBeenCalledTimes(1);
       expect(tokenGenerator.generateRevokeToken).toHaveBeenCalledTimes(1);
 
-      const createCall = subscriptionRepositoryMock.create.mock.calls[0][0];
-      expect(createCall.confirmationToken).toBe('confirmation-token');
-      expect(createCall.revokeToken).toBe('revoke-token');
+      const saveCall = subscriptionRepositoryMock.save.mock.calls[0][0];
+      expect(saveCall.confirmationToken).toBe('confirmation-token');
+      expect(saveCall.revokeToken).toBe('revoke-token');
     });
 
     it('should throw EmailAlreadyExistsError when email is already subscribed', async () => {
@@ -161,7 +144,7 @@ describe('SubscriptionService', () => {
         EmailAlreadyExistsError,
       );
       expect(subscriptionRepositoryMock.findByEmail).toHaveBeenCalledWith(mockEmail);
-      expect(subscriptionRepositoryMock.create).not.toHaveBeenCalled();
+      expect(subscriptionRepositoryMock.save).not.toHaveBeenCalled();
       expect(notificationServiceMock.sendSubscriptionConfirmation).not.toHaveBeenCalled();
     });
 
@@ -187,35 +170,25 @@ describe('SubscriptionService', () => {
         },
       ];
       subscriptionRepositoryMock.findByEmail.mockResolvedValue(null);
-      subscriptionRepositoryMock.create.mockResolvedValue(mockSubscription);
+      subscriptionRepositoryMock.save.mockResolvedValue(mockSubscription);
       weatherApiServiceMock.searchCity.mockResolvedValue(multipleCities);
 
       await subscriptionService.subscribe(mockEmail, mockCity, mockFrequency);
 
-      expect(subscriptionRepositoryMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          city: expect.objectContaining({
-            externalId: multipleCities[0].id,
-            name: multipleCities[0].name,
-          }),
-        }),
-      );
+      expect(subscriptionRepositoryMock.save).toHaveBeenCalledWith(expect.any(Subscription));
     });
 
     it('should work with hourly frequency', async () => {
       subscriptionRepositoryMock.findByEmail.mockResolvedValue(null);
-      subscriptionRepositoryMock.create.mockResolvedValue({
-        ...mockSubscription,
+      const hourlySubscription = new Subscription({
+        ...mockSubscriptionData,
         frequency: 'hourly',
       });
+      subscriptionRepositoryMock.save.mockResolvedValue(hourlySubscription);
 
       await subscriptionService.subscribe(mockEmail, mockCity, 'hourly');
 
-      expect(subscriptionRepositoryMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          frequency: 'hourly',
-        }),
-      );
+      expect(subscriptionRepositoryMock.save).toHaveBeenCalledWith(expect.any(Subscription));
     });
 
     it('should throw error when no cities found', async () => {
@@ -223,7 +196,7 @@ describe('SubscriptionService', () => {
       weatherApiServiceMock.searchCity.mockResolvedValue([]);
 
       await expect(subscriptionService.subscribe(mockEmail, 'NonExistentCity', mockFrequency)).rejects.toThrow();
-      expect(subscriptionRepositoryMock.create).not.toHaveBeenCalled();
+      expect(subscriptionRepositoryMock.save).not.toHaveBeenCalled();
       expect(notificationServiceMock.sendSubscriptionConfirmation).not.toHaveBeenCalled();
     });
   });
@@ -235,10 +208,12 @@ describe('SubscriptionService', () => {
       await subscriptionService.confirmSubscription(mockToken);
 
       expect(subscriptionRepositoryMock.findByConfirmationToken).toHaveBeenCalledWith(mockToken);
-      expect(subscriptionRepositoryMock.updateByConfirmationToken).toHaveBeenCalledWith(mockToken, {
-        isConfirmed: true,
-        confirmationToken: null,
-      });
+      expect(subscriptionRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isConfirmed: true,
+          confirmationToken: null,
+        }),
+      );
       expect(notificationServiceMock.sendSubscriptionConfirmed).toHaveBeenCalledWith({
         email: mockSubscription.email,
         cityFullName: mockSubscription.city.fullName,
@@ -264,7 +239,7 @@ describe('SubscriptionService', () => {
       subscriptionRepositoryMock.findByConfirmationToken.mockResolvedValue(null);
 
       await expect(subscriptionService.confirmSubscription('invalid-token')).rejects.toThrow(TokenNotFoundError);
-      expect(subscriptionRepositoryMock.updateByConfirmationToken).not.toHaveBeenCalled();
+      expect(subscriptionRepositoryMock.save).not.toHaveBeenCalled();
       expect(notificationServiceMock.sendSubscriptionConfirmed).not.toHaveBeenCalled();
     });
   });

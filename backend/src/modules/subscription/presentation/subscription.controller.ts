@@ -1,12 +1,16 @@
 import { EmailDeliveryError } from '@/common/errors/email-errors';
-import { HTTPBadRequestError, HTTPNotFoundError, HTTPInternalServerError } from '@/common/errors/http-error';
+import { HTTPBadRequestError, HTTPInternalServerError, HTTPNotFoundError } from '@/common/errors/http-error';
 import logger from '@/common/logging/logger';
 import { NextFunction, Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
 import { z } from 'zod';
-import { EmailAlreadyExistsError } from './domain/errors/subscription-domain-errors';
-import { TokenNotFoundError, WeatherServiceUnavailableError, NotificationFailedError } from './application/errors';
-import { ISubscriptionService } from './types/subscription-service';
+import {
+  NotificationFailedError,
+  TokenNotFoundError,
+  WeatherServiceUnavailableError,
+} from '../application/errors/subscription.service';
+import { ISubscriptionService } from '../application/interfaces/subscription.service';
+import { EmailAlreadyExistsError } from '../domain/errors/subscription-domain-errors';
 
 @injectable()
 export class SubscriptionController {
