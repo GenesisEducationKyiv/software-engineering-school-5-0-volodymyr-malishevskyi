@@ -1,6 +1,6 @@
 import { HttpClient } from '@/common/http-client';
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
 import { OpenWeatherMapProvider } from '@/modules/weather/infrastructure/weather-providers/openweather/openweather';
+import { IWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
 import { WeatherApiProvider } from '@/modules/weather/infrastructure/weather-providers/weather-api/weather-api';
 import { OpenWeatherHandler } from './openweather-handler';
 import { WeatherApiHandler } from './weather-api-handler';

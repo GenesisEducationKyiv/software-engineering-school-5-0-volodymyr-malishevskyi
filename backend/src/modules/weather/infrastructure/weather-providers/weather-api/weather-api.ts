@@ -1,7 +1,10 @@
-import { WeatherApiCityNotFoundError } from './errors/weather-api';
 import { HttpClient, HttpResponse } from '@/common/http-client'; // Додано HttpResponse
-import { City, IWeatherProvider, Weather } from '@/common/interfaces/weather-provider';
-import { WeatherApiError } from './errors/weather-api';
+import {
+  City,
+  IWeatherProvider,
+  Weather,
+} from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
+import { WeatherApiCityNotFoundError, WeatherApiError } from './errors/weather-api';
 import { CityResponse, ErrorCode, ErrorResponse, WeatherResponse } from './types/weather-api';
 
 const BASE_URL = 'https://api.weatherapi.com';

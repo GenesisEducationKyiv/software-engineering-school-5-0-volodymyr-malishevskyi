@@ -2,7 +2,7 @@ import { ISubscriptionRepository } from '@/modules/subscription/domain/interface
 import { IWeatherService } from '@/modules/weather/application/types/weather.service';
 import { inject, injectable } from 'tsyringe';
 import { IBroadcastService } from '../interfaces/broadcast-service';
-import { INotificationService } from '../interfaces/notification-service';
+import { INotificationService } from '@/modules/notification';
 import logger from '../logging/logger';
 import delay from '../utils/delay';
 

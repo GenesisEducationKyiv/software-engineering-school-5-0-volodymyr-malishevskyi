@@ -1,8 +1,9 @@
+import logger from '@/common/logging/logger';
 import nodemailer, { Transporter } from 'nodemailer';
 import { inject, injectable } from 'tsyringe';
-import { EmailDeliveryError } from '../errors/email-errors';
-import { EmailOptions, IEmailingService } from '../interfaces/emailing-service';
-import logger from '../logging/logger';
+import { IEmailingService } from '../../domain/interfaces/emailing-service';
+import type { EmailOptions } from '../../domain/types/email-types';
+import { EmailDeliveryError } from './errors/email-errors';
 
 export type GmailEmailingServiceConfig = {
   user: string;

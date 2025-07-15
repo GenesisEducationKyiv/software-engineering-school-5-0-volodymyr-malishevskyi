@@ -1,7 +1,10 @@
-import { OpenWeatherCityNotFoundError } from './errors/openweather';
 import { HttpClient, HttpResponse } from '@/common/http-client';
-import { City, IWeatherProvider, Weather } from '@/common/interfaces/weather-provider';
-import { OpenWeatherError } from './errors/openweather';
+import {
+  City,
+  IWeatherProvider,
+  Weather,
+} from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
+import { OpenWeatherCityNotFoundError, OpenWeatherError } from './errors/openweather';
 import { OpenWeatherErrorResponse, OpenWeatherResponse, OpenWeatherSearchResponse } from './types/openweather';
 
 const BASE_URL = 'https://api.openweathermap.org';

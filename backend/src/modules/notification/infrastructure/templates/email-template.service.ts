@@ -1,19 +1,19 @@
 import { injectable } from 'tsyringe';
-import {
-  IEmailTemplateService,
-  SubscriptionCancelledData,
-  SubscriptionConfirmationData,
-  SubscriptionConfirmedData,
+import { IEmailTemplateService } from '../../domain/interfaces/email-template-service';
+import type {
+  SubscriptionCancelledTemplateData,
+  SubscriptionConfirmationTemplateData,
+  SubscriptionConfirmedTemplateData,
   WeatherUpdateData,
   EmailTemplate,
-} from '../interfaces/email-template-service';
+} from '../../domain/types/email-types';
 
 @injectable()
 export class EmailTemplateService implements IEmailTemplateService {
   /**
    * Generate complete email for subscription confirmation
    */
-  getSubscriptionConfirmationEmail(data: SubscriptionConfirmationData): EmailTemplate {
+  getSubscriptionConfirmationEmail(data: SubscriptionConfirmationTemplateData): EmailTemplate {
     return {
       subject: 'Weather Subscription Confirmation',
       html: `
@@ -47,7 +47,7 @@ export class EmailTemplateService implements IEmailTemplateService {
   /**
    * Generate complete email for subscription confirmed
    */
-  getSubscriptionConfirmedEmail(data: SubscriptionConfirmedData): EmailTemplate {
+  getSubscriptionConfirmedEmail(data: SubscriptionConfirmedTemplateData): EmailTemplate {
     return {
       subject: 'Weather Subscription Successfully Confirmed!',
       html: `
@@ -82,7 +82,7 @@ export class EmailTemplateService implements IEmailTemplateService {
   /**
    * Generate complete email for subscription cancelled
    */
-  getSubscriptionCancelledEmail(data: SubscriptionCancelledData): EmailTemplate {
+  getSubscriptionCancelledEmail(data: SubscriptionCancelledTemplateData): EmailTemplate {
     return {
       subject: 'Weather Subscription Cancelled',
       html: `

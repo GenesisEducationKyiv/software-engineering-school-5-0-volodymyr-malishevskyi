@@ -1,6 +1,6 @@
-import { INotificationService } from '@/common/interfaces/notification-service';
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
 import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
+import { INotificationService } from '@/modules/notification';
+import { IWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
 import { inject, injectable } from 'tsyringe';
 import { Subscription } from '../../domain/entities/subscription';
 import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';

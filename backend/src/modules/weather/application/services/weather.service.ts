@@ -1,4 +1,4 @@
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
+import { IWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
 import { inject, injectable } from 'tsyringe';
 import { IWeatherResponse, IWeatherService } from '../types/weather.service';
 

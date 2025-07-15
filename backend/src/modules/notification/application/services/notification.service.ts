@@ -1,13 +1,13 @@
 import { injectable, inject } from 'tsyringe';
-import { IEmailingService } from '../interfaces/emailing-service';
-import { IEmailTemplateService } from '../interfaces/email-template-service';
-import {
-  INotificationService,
+import { IEmailingService } from '../../domain/interfaces/emailing-service';
+import { IEmailTemplateService } from '../../domain/interfaces/email-template-service';
+import { INotificationService } from '../../domain/interfaces/notification-service';
+import type {
   WeatherNotificationData,
   SubscriptionConfirmationData,
   SubscriptionConfirmedData,
   SubscriptionCancellationData,
-} from '../interfaces/notification-service';
+} from '../../domain/types/email-types';
 
 @injectable()
 export class NotificationService implements INotificationService {

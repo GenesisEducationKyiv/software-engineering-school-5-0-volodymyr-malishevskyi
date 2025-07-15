@@ -1,5 +1,5 @@
-import { City, Weather } from '@/common/interfaces/weather-provider';
 import { OpenWeatherMapProvider } from '@/modules/weather/infrastructure/weather-providers/openweather/openweather';
+import { City, Weather } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
 import { WeatherProviderHandler } from './weather-provider-handler';
 
 /**

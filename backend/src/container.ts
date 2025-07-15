@@ -6,9 +6,7 @@ import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provide
 import { FetchHttpClient } from '@/common/http-client';
 import logger from '@/common/logging/logger';
 import { BroadcastService } from '@/common/services/broadcast.service';
-import { EmailTemplateService } from '@/common/services/email-template.service';
-import { GmailEmailingService } from '@/common/services/gmail-emailing.service';
-import { NotificationService } from '@/common/services/notification.service';
+import { EmailTemplateService, GmailEmailingService, NotificationService } from '@/modules/notification';
 import { ConfigFactory, type Config } from '@/config';
 import { PrismaClientInstance } from '@/lib/prisma';
 import { SubscriptionService } from '@/modules/subscription/application/services/subscription.service';
