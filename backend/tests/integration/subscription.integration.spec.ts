@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { createApp } from '@/app';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
-import { Weather } from '@/modules/weather/weather-providers/types/weather-provider';
+import { Weather } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';

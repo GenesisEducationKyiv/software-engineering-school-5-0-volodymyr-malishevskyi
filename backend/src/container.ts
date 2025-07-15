@@ -15,11 +15,11 @@ import { SubscriptionService } from '@/modules/subscription/application/services
 import SubscriptionRepository from '@/modules/subscription/infrastructure/repository/SubscriptionRepository';
 import { SubscriptionController } from '@/modules/subscription/presentation/subscription.controller';
 import { WeatherService } from '@/modules/weather/application/services/weather.service';
+import { CachedWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/cached-weather-provider';
+import { WeatherProviderChainFactory } from '@/modules/weather/infrastructure/weather-providers/chain/weather-provider-chain-factory';
+import { OpenWeatherMapProvider } from '@/modules/weather/infrastructure/weather-providers/openweather/openweather';
+import { WeatherApiProvider } from '@/modules/weather/infrastructure/weather-providers/weather-api/weather-api';
 import { WeatherController } from '@/modules/weather/presentation/weather.controller';
-import { CachedWeatherProvider } from '@/modules/weather/weather-providers/cached-weather-provider';
-import { WeatherProviderChainFactory } from '@/modules/weather/weather-providers/chain/weather-provider-chain-factory';
-import { OpenWeatherMapProvider } from '@/modules/weather/weather-providers/openweather/openweather';
-import { WeatherApiProvider } from '@/modules/weather/weather-providers/weather-api/weather-api';
 import { Registry } from 'prom-client';
 import 'reflect-metadata';
 import { container, DependencyContainer } from 'tsyringe';

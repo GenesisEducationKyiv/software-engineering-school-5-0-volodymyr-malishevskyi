@@ -1,5 +1,5 @@
 import { FetchHttpClient } from '@/common/http-client';
-import { WeatherProviderChainFactory } from '@/modules/weather/weather-providers/chain/weather-provider-chain-factory';
+import { WeatherProviderChainFactory } from '@/modules/weather/infrastructure/weather-providers/chain/weather-provider-chain-factory';
 
 // Mock the HTTP client
 const mockHttpClient = {

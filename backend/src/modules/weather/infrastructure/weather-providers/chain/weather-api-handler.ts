@@ -1,5 +1,5 @@
 import { City, Weather } from '@/common/interfaces/weather-provider';
-import { WeatherApiProvider } from '@/modules/weather/weather-providers/weather-api/weather-api';
+import { WeatherApiProvider } from '@/modules/weather/infrastructure/weather-providers/weather-api/weather-api';
 import { WeatherProviderHandler } from './weather-provider-handler';
 
 /**

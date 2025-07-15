@@ -3,8 +3,8 @@ import { NextFunction, Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
 import { z } from 'zod';
 import { IWeatherService } from '../application/types/weather.service';
-import { OpenWeatherCityNotFoundError } from '../weather-providers/openweather/errors/openweather';
-import { WeatherApiCityNotFoundError } from '../weather-providers/weather-api/errors/weather-api';
+import { OpenWeatherCityNotFoundError } from '../infrastructure/weather-providers/openweather/errors/openweather';
+import { WeatherApiCityNotFoundError } from '../infrastructure/weather-providers/weather-api/errors/weather-api';
 
 @injectable()
 export class WeatherController {

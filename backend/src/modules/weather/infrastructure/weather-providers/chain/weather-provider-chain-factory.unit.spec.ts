@@ -11,8 +11,8 @@ const mockHttpClient = {
 } as jest.Mocked<HttpClient>;
 
 // Mock the actual provider services
-jest.mock('@/modules/weather/weather-providers/weather-api/weather-api');
-jest.mock('@/modules/weather/weather-providers/openweather/openweather');
+jest.mock('@/modules/weather/infrastructure/weather-providers/weather-api/weather-api');
+jest.mock('@/modules/weather/infrastructure/weather-providers/openweather/openweather');
 
 describe('WeatherProviderChainFactory', () => {
   beforeEach(() => {
