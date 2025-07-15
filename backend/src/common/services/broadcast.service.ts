@@ -1,5 +1,5 @@
 import { ISubscriptionRepository } from '@/modules/subscription/domain/interfaces/subscription.repository';
-import { WeatherService } from '@/modules/weather/weather.service';
+import { IWeatherService } from '@/modules/weather/application/types/weather.service';
 import { inject, injectable } from 'tsyringe';
 import { IBroadcastService } from '../interfaces/broadcast-service';
 import { INotificationService } from '../interfaces/notification-service';
@@ -12,7 +12,7 @@ export class BroadcastService implements IBroadcastService {
     @inject('SubscriptionRepository')
     private readonly subscriptionRepository: ISubscriptionRepository,
     @inject('WeatherService')
-    private readonly weatherService: WeatherService,
+    private readonly weatherService: IWeatherService,
     @inject('NotificationService')
     private readonly notificationService: INotificationService,
     @inject('Config')

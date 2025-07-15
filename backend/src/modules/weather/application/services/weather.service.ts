@@ -1,6 +1,6 @@
 import { IWeatherProvider } from '@/common/interfaces/weather-provider';
 import { inject, injectable } from 'tsyringe';
-import { WeatherResponse } from './types/weather';
+import { IWeatherResponse, IWeatherService } from '../types/weather.service';
 
 /**
  * Weather Service
@@ -9,7 +9,7 @@ import { WeatherResponse } from './types/weather';
  * Uses dependency injection for weather provider resolution.
  */
 @injectable()
-export class WeatherService {
+export class WeatherService implements IWeatherService {
   constructor(
     @inject('CachedWeatherProvider')
     private readonly weatherProvider: IWeatherProvider,
@@ -21,7 +21,7 @@ export class WeatherService {
    * @param city - City name to get weather for
    * @returns Weather information including temperature, humidity, and description
    */
-  async getWeatherByCity(city: string): Promise<WeatherResponse> {
+  async getWeatherByCity(city: string): Promise<IWeatherResponse> {
     const weather = await this.weatherProvider.getWeatherByCity(city);
 
     return {
