@@ -13,7 +13,10 @@ services:
     environment:
       APP_URL: http://localhost:9010
       DATABASE_URL: postgresql://e2e-user:e2e@db:5432/e2e-db?schema=public
-      WEATHER_API_KEY: ${WEATHER_API_KEY}
+
+      WEATHER_SERVICE_URL: http://weather-service:3000
+      WEATHER_SERVICE_GRPC_URL: weather-service:50051
+      COMMUNICATION_PROTOCOL: grpc
 
       SMTP_FROM: E2E Weather App <noreply@weather.app>
       SMTP_USER: ${SMTP_USER}
@@ -21,7 +24,36 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      weather-service:
+        condition: service_started
     restart: always
+  
+  weather-service:
+    build:
+      context: ./weather
+      dockerfile: Dockerfile
+    ports:
+      - 3001:3000
+      - 50051:50051
+    env_file:
+      - path: e2e.env
+        required: false
+    environment:
+      PORT: 3000
+      GRPC_PORT: 50051
+
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
+      CACHE_TYPE: redis
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   frontend:
     build:
@@ -43,6 +75,17 @@ services:
       - 5434:5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U e2e-user -d e2e-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5

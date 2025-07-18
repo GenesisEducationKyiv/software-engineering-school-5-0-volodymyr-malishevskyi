@@ -1,45 +1,46 @@
-jest.mock('@/config', () => {
-  return {
-    __esModule: true,
-    default: {},
-  };
-});
+import 'reflect-metadata';
 
 import { createApp } from '@/app';
-import { Weather } from '@/common/interfaces/weather-api-service';
-import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { WeatherApiService } from '@/common/services/weather-api/weather-api';
+import { ConfigFactory } from '@/config/config-factory';
+import { container } from '@/container';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DependencyContainer } from 'tsyringe';
+import { mockCacheProvider, mockEmailingService, mockMetricsService, mockWeatherProvider } from '../helpers/mocks';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 
-const mockWeatherApiService = {
-  getWeatherByCity: jest.fn(),
-  searchCity: jest.fn(),
-} as unknown as jest.Mocked<WeatherApiService>;
-
-const mockEmailingService = {
-  sendEmail: jest.fn(),
-} as unknown as jest.Mocked<GmailEmailingService>;
+// Mock token generator utility
+jest.mock('@/common/utils/token-generator', () => ({
+  generateConfirmationToken: jest.fn().mockReturnValue('test-confirmation-token'),
+  generateRevokeToken: jest.fn().mockReturnValue('test-revoke-token'),
+  generateToken: jest.fn().mockReturnValue('test-token'),
+}));
 
 describe('Subscription Integration Tests', () => {
   let app: App;
   let prisma: PrismaClient;
+  let testContainer: DependencyContainer;
 
   beforeAll(async () => {
     // Setup test database
     const dbSetup = await setupTestDatabase();
 
-    app = createApp({
-      weatherApiService: mockWeatherApiService,
-      emailingService: mockEmailingService,
-      config: {
-        appUrl: 'http://localhost:3000',
-      },
-      prisma: dbSetup.prisma,
-    });
+    // Create child container from main container
+    testContainer = container.createChildContainer();
 
+    // Register test config and database
+    const config = ConfigFactory.createTestConfig();
+    testContainer.registerInstance('Config', config);
+    testContainer.registerInstance('PrismaClient', dbSetup.prisma);
+
+    // Override only the services we want to mock
+    testContainer.registerInstance('MetricsService', mockMetricsService);
+    testContainer.registerInstance('EmailingService', mockEmailingService);
+    testContainer.registerInstance('WeatherProvider', mockWeatherProvider);
+    testContainer.registerInstance('CacheProvider', mockCacheProvider);
+
+    app = createApp(testContainer);
     prisma = dbSetup.prisma;
   }, 60000);
 
@@ -49,14 +50,15 @@ describe('Subscription Integration Tests', () => {
   });
 
   beforeEach(async () => {
-    // Reset mocks before each test
+    // Reset all mocks before each test
+    jest.clearAllMocks();
 
     // Clean database before each test
     await prisma.subscription.deleteMany();
     await prisma.city.deleteMany();
 
     // Set up default mock implementations
-    mockWeatherApiService.searchCity = jest.fn().mockResolvedValue([
+    mockWeatherProvider.searchCity = jest.fn().mockResolvedValue([
       {
         id: 123,
         name: 'Kyiv',
@@ -68,15 +70,11 @@ describe('Subscription Integration Tests', () => {
       },
     ]);
 
-    mockWeatherApiService.getWeatherByCity = jest.fn().mockResolvedValue({
-      city: 'Kyiv',
-      temperature: {
-        c: 25,
-        f: 77,
-      },
+    mockWeatherProvider.getWeatherByCity = jest.fn().mockResolvedValue({
+      temperature: 25,
       humidity: 65,
-      shortDescription: 'Sunny',
-    } as Weather);
+      description: 'Sunny',
+    });
 
     mockEmailingService.sendEmail = jest.fn().mockResolvedValue(undefined);
   });
@@ -163,15 +161,15 @@ describe('Subscription Integration Tests', () => {
       expect(response.body).toHaveProperty('message', 'Email already subscribed');
     });
 
-    it('should return 500 when search city fails', async () => {
+    it('should return 400 when search city fails', async () => {
       // Arrange
-      mockWeatherApiService.searchCity = jest.fn().mockRejectedValue(new Error('External API error'));
+      mockWeatherProvider.searchCity = jest.fn().mockRejectedValue(new Error('External API error'));
 
       // Act
       const response = await request(app).post('/api/subscribe').send(validSubscriptionData);
 
       // Assert
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
     });
   });
 
@@ -284,9 +282,11 @@ describe('Subscription Integration Tests', () => {
     });
 
     it('should return 500 for unexpected errors', async () => {
-      // Arrange - Force a database error by mocking the delete method
-      const originalDeleteMethod = prisma.subscription.delete;
-      prisma.subscription.delete = jest.fn().mockRejectedValue(new Error('Database error')) as jest.Mock;
+      // Arrange - Mock the repository method to throw an error
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const subscriptionRepository = testContainer.resolve('SubscriptionRepository') as any;
+      const originalDeleteMethod = subscriptionRepository.deleteByRevokeToken;
+      subscriptionRepository.deleteByRevokeToken = jest.fn().mockRejectedValue(new Error('Database error'));
 
       // Act
       const response = await request(app).get(`/api/unsubscribe/${revokeToken}`);
@@ -295,7 +295,7 @@ describe('Subscription Integration Tests', () => {
       expect(response.status).toBe(500);
 
       // Restore original method
-      prisma.subscription.delete = originalDeleteMethod;
+      subscriptionRepository.deleteByRevokeToken = originalDeleteMethod;
     });
   });
 });

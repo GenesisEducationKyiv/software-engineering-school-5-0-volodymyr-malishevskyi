@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package weather;
+
+service WeatherService {
+  // Get current weather for a city
+  rpc GetWeatherByCity(WeatherRequest) returns (WeatherResponse);
+  
+  // Search for cities by name
+  rpc SearchCity(SearchCityRequest) returns (SearchCityResponse);
+}
+
+// Request message for getting weather by city name
+message WeatherRequest {
+  string city = 1;
+}
+
+// Response message with weather data
+message WeatherResponse {
+  double temperature = 1;
+  int32 humidity = 2;
+  string description = 3;
+  string city_full_name = 4;
+}
+
+// Request message for searching cities
+message SearchCityRequest {
+  string query = 1;
+}
+
+// Response message with list of cities
+message SearchCityResponse {
+  repeated City cities = 1;
+}
+
+// City information
+message City {
+  uint32 id = 1;
+  string name = 2;
+  string region = 3;
+  string country = 4;
+  double lat = 5;
+  double lon = 6;
+  string full_name = 7;
+}
