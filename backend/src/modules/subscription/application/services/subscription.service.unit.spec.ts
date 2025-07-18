@@ -1,5 +1,5 @@
 import { INotificationService } from '@/modules/notification';
-import { City, IWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
+import { City, IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
 import 'reflect-metadata';
 import { Subscription } from '../../domain/entities/subscription';
 import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';

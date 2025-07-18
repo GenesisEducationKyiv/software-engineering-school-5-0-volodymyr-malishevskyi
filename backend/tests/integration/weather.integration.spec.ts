@@ -3,8 +3,7 @@ import 'reflect-metadata';
 import { createApp } from '@/app';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
-import { Weather } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
-import { WeatherApiCityNotFoundError } from '@/modules/weather/infrastructure/weather-providers/weather-api/errors/weather-api';
+import { IWeatherResponse } from '@/modules/weather/infrastructure/types/weather.client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DependencyContainer } from 'tsyringe';
@@ -55,18 +54,11 @@ describe('Weather Integration Tests', () => {
   describe('GET /api/weather', () => {
     it('should return weather data for a valid city', async () => {
       // Arrange
-      const mockWeatherData: Weather = {
-        city: 'Kyiv',
-        temperature: {
-          c: 25,
-          f: 77,
-        },
+      const mockWeatherData: IWeatherResponse = {
+        temperature: 25,
         humidity: 65,
-        shortDescription: 'Sunny',
+        description: 'Sunny',
       };
-
-      // Mock cache miss
-      mockCacheProvider.get.mockResolvedValue(null);
 
       // Mock implementation
       mockWeatherProvider.getWeatherByCity.mockResolvedValue(mockWeatherData);
@@ -82,20 +74,6 @@ describe('Weather Integration Tests', () => {
         description: 'Sunny',
       });
       expect(mockWeatherProvider.getWeatherByCity).toHaveBeenCalledWith('Kyiv');
-      expect(mockCacheProvider.get).toHaveBeenCalledWith('weather:Kyiv');
-      expect(mockCacheProvider.set).toHaveBeenCalledWith(
-        'weather:Kyiv',
-        {
-          city: 'Kyiv',
-          temperature: {
-            c: 25,
-            f: 77,
-          },
-          humidity: 65,
-          shortDescription: 'Sunny',
-        },
-        300,
-      );
     });
 
     it('should return 400 Bad Request when city parameter is missing', async () => {
@@ -116,16 +94,15 @@ describe('Weather Integration Tests', () => {
       expect(response.body).toHaveProperty('message', 'Invalid request');
     });
 
-    it('should return 404 Not Found when city is not found', async () => {
+    it('should return 500 Internal Server Error when weather provider fails', async () => {
       // Arrange
-      mockWeatherProvider.getWeatherByCity.mockRejectedValue(new WeatherApiCityNotFoundError());
+      mockWeatherProvider.getWeatherByCity.mockRejectedValue(new Error('Weather service unavailable'));
 
       // Act
       const response = await request(app).get('/api/weather').query({ city: 'NonexistentCity' });
 
       // Assert
-      expect(response.status).toBe(404);
-      expect(response.body).toHaveProperty('message', 'City not found');
+      expect(response.status).toBe(500);
     });
 
     it('should return 500 Internal Server Error for unexpected errors', async () => {
