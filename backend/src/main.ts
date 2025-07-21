@@ -4,13 +4,19 @@ import config from '@/config';
 
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';
-import app from './app';
-import { weatherBroadcastService } from './dependencies';
 
-const port = config.port;
+import { emailingService, weatherApiService, weatherBroadcastService } from './dependencies';
+import { createApp } from './app';
 
-const server = app.listen(port, () => {
-  console.log(`Server started: http://127.0.0.1:${port}`);
+const app = createApp({
+  config,
+  weatherApiService: weatherApiService,
+  emailingService: emailingService,
+  prisma,
+});
+
+const server = app.listen(config.port, () => {
+  console.log(`Server started: http://127.0.0.1:${config.port}`);
 });
 
 config.broadcastCrons.forEach(([type, cron]) => {

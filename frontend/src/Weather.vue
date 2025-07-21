@@ -144,11 +144,13 @@ const handleSubscription = async () => {
           v-model="city"
           @keydown.enter="fetchWeather"
           aria-label="City name for weather search"
+          data-testid="city-input"
         />
         <button
           @click="fetchWeather"
           :disabled="loading"
           aria-label="Search weather"
+          data-testid="search-button"
         >
           {{ loading ? "Searching..." : "Search" }}
         </button>
@@ -178,7 +180,12 @@ const handleSubscription = async () => {
           <span class="value">{{ weather.description }}</span>
         </div>
       </div>
-      <button @click="openSubscriptionModal" class="subscribe-button">
+      <button
+        @click="openSubscriptionModal"
+        class="subscribe-button"
+        aria-label="Subscribe to weather updates"
+        data-testid="subscribe-button"
+      >
         Subscribe to Updates
       </button>
     </div>
@@ -204,7 +211,9 @@ const handleSubscription = async () => {
               />
             </svg>
           </div>
-          <h3>Subscription Request Sent!</h3>
+          <h3 data-testid="subscription-success-title">
+            Subscription Request Sent!
+          </h3>
           <p class="success-message modal-success centered-text">
             {{ subscriptionSuccessMessage }}
           </p>
@@ -230,11 +239,18 @@ const handleSubscription = async () => {
                 required
                 placeholder="your@email.com"
                 ref="emailInputRef"
+                data-testid="subscription-email-input"
               />
             </div>
             <div class="form-group">
               <label for="frequency">Frequency:</label>
-              <select id="frequency" v-model="subscriptionFrequency">
+              <select
+                id="frequency"
+                v-model="subscriptionFrequency"
+                aria-label="Subscription frequency"
+                data-testid="subscription-frequency-select"
+              >
+                <option value="" disabled>Select frequency</option>
                 <option value="daily">Daily</option>
                 <option value="hourly">Hourly</option>
               </select>
@@ -247,6 +263,7 @@ const handleSubscription = async () => {
                 type="button"
                 @click="closeSubscriptionModal"
                 class="button-secondary"
+                data-testid="subscribe-cancel-button"
               >
                 Cancel
               </button>
@@ -254,6 +271,7 @@ const handleSubscription = async () => {
                 type="submit"
                 :disabled="subscriptionLoading"
                 class="button-primary"
+                data-testid="subscribe-submit-button"
               >
                 {{ subscriptionLoading ? "Subscribing..." : "Subscribe" }}
               </button>
