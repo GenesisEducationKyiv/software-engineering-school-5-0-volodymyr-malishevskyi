@@ -26,7 +26,7 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/package*.json ./
 
-RUN npm ci --only=production
+RUN npm ci --only=production --ignore-scripts
 
 COPY --from=builder /app/dist ./dist
 
