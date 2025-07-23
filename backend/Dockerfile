@@ -1,5 +1,5 @@
 # Base image
-FROM node:22-alpine AS base
+FROM node:22.17.1-alpine3.22 AS base
 WORKDIR /app
 
 
@@ -33,10 +33,13 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma/
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+RUN addgroup -S appgroup && \
+    adduser -S appuser -G appgroup
 COPY --chown=appuser:appgroup entrypoint.sh .
-RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && \
+    chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 3000
 
