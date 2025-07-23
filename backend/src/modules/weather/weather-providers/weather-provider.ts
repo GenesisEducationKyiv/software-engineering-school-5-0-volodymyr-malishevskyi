@@ -18,7 +18,7 @@ export type City = {
   url: string;
 };
 
-export interface IWeatherApiService {
+export interface IWeatherProvider {
   getWeatherByCity(city: string): Promise<Weather>;
   searchCity(city: string): Promise<City[]>;
 }

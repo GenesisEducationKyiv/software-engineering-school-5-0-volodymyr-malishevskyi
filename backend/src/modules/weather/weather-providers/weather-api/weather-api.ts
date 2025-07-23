@@ -1,5 +1,5 @@
 import { HttpClient, HttpResponse } from '@/common/http-client'; // Додано HttpResponse
-import { City, IWeatherApiService, Weather } from '@/common/interfaces/weather-api-service';
+import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/weather-provider';
 import { CityNotFoundError, WeatherApiError } from './errors/weather-api';
 import { CityResponse, ErrorCode, ErrorResponse, WeatherResponse } from './types/weather-api';
 
@@ -9,7 +9,7 @@ export interface WeatherApiServiceConfig {
   apiKey: string;
 }
 
-export class WeatherApiService implements IWeatherApiService {
+export class WeatherApiService implements IWeatherProvider {
   constructor(
     private httpClient: HttpClient,
     private config: WeatherApiServiceConfig,
