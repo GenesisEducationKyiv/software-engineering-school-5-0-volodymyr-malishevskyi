@@ -1,12 +1,13 @@
 import { PrismaClient } from '@/lib/prisma';
+import { IWeatherProvider } from '../../modules/weather/weather-providers/weather-provider';
 import { IEmailingService } from '../interfaces/emailing-service';
-import { IWeatherApiService } from '../interfaces/weather-api-service';
 import delay from '../utils/delay';
+import logger from './logger';
 
 export class WeatherBroadcastService {
   constructor(
     private prisma: PrismaClient,
-    private readonly weatherApiService: IWeatherApiService,
+    private readonly weatherApiService: IWeatherProvider,
     private readonly emailingService: IEmailingService,
     private readonly config: { sendingDelay: number } = { sendingDelay: 1000 },
   ) {}
@@ -25,7 +26,7 @@ export class WeatherBroadcastService {
     });
 
     if (!subscriptions.length) {
-      console.log('No subscriptions found for the specified frequency.');
+      logger.info('No subscriptions found for the specified frequency', { type: 'business', frequency });
       return;
     }
 
@@ -58,7 +59,13 @@ export class WeatherBroadcastService {
             html: emailContent,
           });
         } catch (e) {
-          console.error(`Failed to send email to ${email}:`, e);
+          logger.error(`Failed to send email to ${email}`, {
+            type: 'external',
+            email,
+            city: cityFullName,
+            frequency,
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
 
         delay(this.config.sendingDelay);

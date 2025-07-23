@@ -7,7 +7,7 @@ jest.mock('@/config', () => {
 
 import { createApp } from '@/app';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { WeatherApiService } from '@/common/services/weather-api/weather-api';
+import { WeatherApiService } from '@/modules/weather/weather-providers/weather-api/weather-api';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';

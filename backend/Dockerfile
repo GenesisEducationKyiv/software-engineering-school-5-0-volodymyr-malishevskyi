@@ -1,5 +1,5 @@
 # Base image
-FROM node:22-alpine AS base
+FROM node:22.17.1-alpine3.22 AS base
 WORKDIR /app
 
 
@@ -8,7 +8,7 @@ FROM base AS builder
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY prisma ./prisma/
 
@@ -26,17 +26,20 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/package*.json ./
 
-RUN npm ci --only=production
+RUN npm ci --only=production --ignore-scripts
 
 COPY --from=builder /app/dist ./dist
 
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma/
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+RUN addgroup -S appgroup && \
+    adduser -S appuser -G appgroup
 COPY --chown=appuser:appgroup entrypoint.sh .
-RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && \
+    chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 3000
 

@@ -6,10 +6,10 @@ jest.mock('@/config', () => {
 });
 
 import { createApp } from '@/app';
-import { Weather } from '@/common/interfaces/weather-api-service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { CityNotFoundError } from '@/common/services/weather-api/errors/weather-api';
-import { WeatherApiService } from '@/common/services/weather-api/weather-api';
+import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
+import { WeatherApiService } from '@/modules/weather/weather-providers/weather-api/weather-api';
+import { Weather } from '@/modules/weather/weather-providers/weather-provider';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';

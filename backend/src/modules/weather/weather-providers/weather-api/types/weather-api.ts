@@ -1,4 +1,4 @@
-import { City } from '@/common/interfaces/weather-api-service';
+import { City } from '@/modules/weather/weather-providers/weather-provider';
 
 export interface WeatherResponse {
   location: {

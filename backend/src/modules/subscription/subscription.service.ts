@@ -1,5 +1,5 @@
 import { IEmailingService } from '@/common/interfaces/emailing-service';
-import { IWeatherApiService } from '@/common/interfaces/weather-api-service';
+import { IWeatherProvider } from '@/modules/weather/weather-providers/weather-provider';
 import crypto from 'crypto';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { ISubscriptionRepository } from './types/subscription-repository';
@@ -13,7 +13,7 @@ function generateToken(length: number): string {
 export class SubscriptionService {
   constructor(
     private subscriptionRepository: ISubscriptionRepository,
-    private weatherApiService: IWeatherApiService,
+    private weatherApiService: IWeatherProvider,
     private emailingService: IEmailingService,
     private readonly config: { appUrl: string },
   ) {}
