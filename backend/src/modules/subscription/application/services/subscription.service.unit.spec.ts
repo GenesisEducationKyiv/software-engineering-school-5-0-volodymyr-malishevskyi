@@ -1,9 +1,10 @@
 import 'reflect-metadata';
+
 import {
-  EventBus,
-  SubscriptionCreatedEvent,
-  SubscriptionConfirmedEvent,
+  IEventBus,
   SubscriptionCancelledEvent,
+  SubscriptionConfirmedEvent,
+  SubscriptionCreatedEvent,
 } from '@/common/events';
 import { City, IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
 import { Subscription } from '../../domain/entities/subscription';
@@ -21,7 +22,7 @@ jest.mock('@/common/utils/token-generator', () => ({
 describe('SubscriptionService', () => {
   let subscriptionRepositoryMock: jest.Mocked<ISubscriptionRepository>;
   let weatherApiServiceMock: jest.Mocked<IWeatherProvider>;
-  let eventBusMock: jest.Mocked<EventBus>;
+  let eventBusMock: jest.Mocked<IEventBus>;
   let configMock: { appUrl: string };
   let subscriptionService: SubscriptionService;
 
@@ -96,7 +97,7 @@ describe('SubscriptionService', () => {
       prependListener: jest.fn(),
       prependOnceListener: jest.fn(),
       eventNames: jest.fn(),
-    } as unknown as jest.Mocked<EventBus>;
+    } as unknown as jest.Mocked<IEventBus>;
 
     configMock = { appUrl: 'https://example.com' };
 

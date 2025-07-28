@@ -1,14 +1,16 @@
 import { EventEmitter } from 'events';
 import { injectable } from 'tsyringe';
-import logger from '../logging/logger';
-import { BaseEvent } from './base-event';
+import logger from '../../logging/logger';
+import { BaseEvent } from '../base-event';
+import { EventHandler } from '../types/event-handler';
+import { IEventBus } from '../interfaces/event-bus.interface';
 
-export interface EventHandler<T extends BaseEvent = BaseEvent> {
-  handle(event: T): Promise<void>;
-}
-
+/**
+ * In-memory event bus implementation using Node.js EventEmitter
+ * Best for development, testing, and single-instance deployments
+ */
 @injectable()
-export class EventBus extends EventEmitter {
+export class InMemoryEventBus extends EventEmitter implements IEventBus {
   private handlers = new Map<string, EventHandler[]>();
 
   constructor() {
@@ -84,5 +86,11 @@ export class EventBus extends EventEmitter {
 
   getHandlerCount(eventType: string): number {
     return (this.handlers.get(eventType) || []).length;
+  }
+
+  async shutdown(): Promise<void> {
+    this.removeAllListeners();
+    this.handlers.clear();
+    logger.info('InMemoryEventBus shut down successfully');
   }
 }

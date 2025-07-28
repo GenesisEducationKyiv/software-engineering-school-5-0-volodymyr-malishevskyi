@@ -6,6 +6,7 @@ import { type Config } from '@/config';
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';
 
+import { IEventBus } from '@/common/events/interfaces/event-bus.interface';
 import { IBroadcastService } from '@/common/interfaces/broadcast-service';
 import { createApp } from './app';
 import { container } from './container';
@@ -52,6 +53,17 @@ const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Shutting down gracefully...`, { type: 'shutdown', signal });
   server.close(async () => {
     logger.info('HTTP server stopped.', { type: 'startup' });
+    try {
+      // Shutdown EventBus
+      const eventBus = container.resolve<IEventBus>('EventBus');
+      if (eventBus?.shutdown) {
+        await eventBus.shutdown();
+      }
+      logger.info('EventBus shut down successfully.', { type: 'eventBus' });
+    } catch (e) {
+      logger.error('Error shutting down EventBus', { type: 'eventBus', error: e });
+    }
+
     try {
       await prisma.$disconnect();
       logger.info('Prisma client disconnected.', { type: 'database' });

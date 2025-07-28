@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import { EventBus, EventHandler } from './event-bus';
+import { EventHandler } from './types/event-handler';
+import { InMemoryEventBus } from './implementations/in-memory-event-bus';
 import { DomainEvent } from './base-event';
 
 class TestEvent extends DomainEvent {
@@ -27,10 +28,10 @@ class TestEventHandler implements EventHandler<TestEvent> {
 }
 
 describe('EventBus', () => {
-  let eventBus: EventBus;
+  let eventBus: InMemoryEventBus;
 
   beforeEach(() => {
-    eventBus = new EventBus();
+    eventBus = new InMemoryEventBus();
   });
 
   afterEach(() => {

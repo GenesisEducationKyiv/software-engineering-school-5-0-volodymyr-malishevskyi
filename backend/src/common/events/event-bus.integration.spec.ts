@@ -2,7 +2,7 @@ import 'reflect-metadata';
 
 import { SubscriptionEventConsumer } from '@/modules/notification/application/consumers/subscription-event.consumer';
 import { INotificationService } from '@/modules/notification/domain/interfaces/notification-service';
-import { EventBus } from './event-bus';
+import { InMemoryEventBus } from './implementations/in-memory-event-bus';
 import {
   SubscriptionCancelledEvent,
   SubscriptionConfirmedEvent,
@@ -10,12 +10,12 @@ import {
 } from './subscription-events';
 
 describe('EventBus Integration Tests', () => {
-  let eventBus: EventBus;
+  let eventBus: InMemoryEventBus;
   let notificationServiceMock: jest.Mocked<INotificationService>;
   let subscriptionEventConsumer: SubscriptionEventConsumer;
 
   beforeEach(() => {
-    eventBus = new EventBus();
+    eventBus = new InMemoryEventBus();
 
     notificationServiceMock = {
       sendWeatherNotification: jest.fn(),

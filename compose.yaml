@@ -15,6 +15,12 @@ services:
       WEATHER_SERVICE_URL: http://weather-service:3000
       WEATHER_SERVICE_GRPC_URL: weather-service:50051
       COMMUNICATION_PROTOCOL: grpc
+      
+      # Event Bus configuration
+      EVENT_BUS_PROVIDER: redpanda
+      REDPANDA_BROKERS: '["redpanda:9092"]'
+      REDPANDA_CLIENT_ID: weather-backend
+      REDPANDA_GROUP_ID: weather-backend-group
 
       SMTP_FROM: ${SMTP_FROM}
       SMTP_USER: ${SMTP_USER}
@@ -24,6 +30,8 @@ services:
         condition: service_healthy
       weather-service:
         condition: service_started
+      redpanda:
+        condition: service_healthy
   weather-service:
     build:
       context: ./weather
@@ -89,6 +97,55 @@ services:
       retries: 5
       start_period: 10s
   
+  redpanda:
+    image: redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr
+      - internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr
+      - redpanda:33145
+      - --advertise-rpc-addr
+      - redpanda:33145
+      - --smp
+      - '1'
+      - --memory
+      - '1G'
+      - --mode
+      - dev-container
+      - --default-log-level=info
+    ports:
+      - "18081:18081"  # Schema Registry
+      - "18082:18082"  # REST Proxy
+      - "19092:19092"  # Kafka API
+      - "19644:9644"   # Admin API
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: redpanda-console
+    ports:
+      - 8081:8080
+    environment:
+      KAFKA_BROKERS: redpanda:9092 
+      KAFKA_SCHEMA_REGISTRY_URL: http://redpanda:8081 
+    depends_on:
+      - redpanda
+
   prometheus:
     image: prom/prometheus:latest
     ports:

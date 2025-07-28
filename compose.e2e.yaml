@@ -18,6 +18,8 @@ services:
       WEATHER_SERVICE_GRPC_URL: weather-service:50051
       COMMUNICATION_PROTOCOL: grpc
 
+      EVENT_BUS_PROVIDER: in-memory
+
       SMTP_FROM: E2E Weather App <noreply@weather.app>
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}

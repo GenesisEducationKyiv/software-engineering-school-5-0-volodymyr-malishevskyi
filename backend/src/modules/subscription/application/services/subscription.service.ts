@@ -1,5 +1,5 @@
 import {
-  EventBus,
+  IEventBus,
   SubscriptionCancelledEvent,
   SubscriptionConfirmedEvent,
   SubscriptionCreatedEvent,
@@ -27,7 +27,7 @@ export class SubscriptionService {
     @inject('WeatherProvider')
     private weatherProvider: IWeatherProvider,
     @inject('EventBus')
-    private eventBus: EventBus,
+    private eventBus: IEventBus,
     @inject('Config')
     private readonly config: { appUrl: string },
   ) {}

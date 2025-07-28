@@ -1,9 +1,6 @@
-import {
-  EventBus,
-  SubscriptionCancelledEvent,
-  SubscriptionConfirmedEvent,
-  SubscriptionCreatedEvent,
-} from '@/common/events';
+import { SubscriptionCancelledEvent, SubscriptionConfirmedEvent, SubscriptionCreatedEvent } from '@/common/events';
+import { EventBusFactory } from '@/common/events/event-bus-factory';
+import { IEventBus } from '@/common/events/interfaces/event-bus.interface';
 import { FetchHttpClient } from '@/common/http-client';
 import logger from '@/common/logging/logger';
 import { BroadcastService } from '@/common/services/broadcast.service';
@@ -39,7 +36,8 @@ container.registerSingleton('PromClientRegistry', Registry);
 container.registerSingleton('MetricsService', MetricsService);
 
 // Event Bus
-container.registerSingleton('EventBus', EventBus);
+const eventBusInstance = EventBusFactory.create(config.eventBus);
+container.registerInstance('EventBus', eventBusInstance);
 
 // Weather service configuration
 container.registerInstance('WeatherServiceHttpClientConfig', {
@@ -85,7 +83,7 @@ container.registerSingleton('SubscriptionService', SubscriptionService);
 container.registerSingleton('SubscriptionController', SubscriptionController);
 
 // Initialize event consumers for main container
-const eventBus = container.resolve<EventBus>('EventBus');
+const eventBus = container.resolve<IEventBus>('EventBus');
 const subscriptionEventConsumer = container.resolve<SubscriptionEventConsumer>('SubscriptionEventConsumer');
 
 // Register subscription event handlers

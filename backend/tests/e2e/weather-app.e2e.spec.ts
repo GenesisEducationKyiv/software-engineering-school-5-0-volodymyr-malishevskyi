@@ -3,8 +3,9 @@ import 'reflect-metadata';
 import { createApp } from '@/app';
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
-import { EventBus } from '@/common/events/event-bus';
 import { SubscriptionCreatedEvent, SubscriptionConfirmedEvent, SubscriptionCancelledEvent } from '@/common/events';
+import { EventBusFactory } from '@/common/events/event-bus-factory';
+import { IEventBus } from '@/common/events/interfaces/event-bus.interface';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
 import { SubscriptionEventConsumer } from '@/modules/notification/application/consumers/subscription-event.consumer';
@@ -57,12 +58,13 @@ describe('App E2E Tests', () => {
     testContainer.registerSingleton('EmailTemplateService', EmailTemplateService);
     testContainer.registerSingleton('NotificationService', NotificationService);
 
-    // Register EventBus and SubscriptionEventConsumer as singletons
-    testContainer.registerSingleton('EventBus', EventBus);
+    // Create EventBus instance using factory with test config
+    const testEventBusInstance = EventBusFactory.create(config.eventBus);
+    testContainer.registerInstance('EventBus', testEventBusInstance);
     testContainer.registerSingleton('SubscriptionEventConsumer', SubscriptionEventConsumer);
 
     // Initialize event consumers with test container
-    const testEventBus = testContainer.resolve<EventBus>('EventBus');
+    const testEventBus = testContainer.resolve<IEventBus>('EventBus');
     const testSubscriptionEventConsumer = testContainer.resolve<SubscriptionEventConsumer>('SubscriptionEventConsumer');
 
     testEventBus.subscribe(
