@@ -1,6 +1,11 @@
-import { INotificationService } from '@/modules/notification';
-import { City, IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
 import 'reflect-metadata';
+import {
+  EventBus,
+  SubscriptionCreatedEvent,
+  SubscriptionConfirmedEvent,
+  SubscriptionCancelledEvent,
+} from '@/common/events';
+import { City, IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
 import { Subscription } from '../../domain/entities/subscription';
 import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';
 import { ISubscriptionRepository } from '../../domain/interfaces/subscription.repository';
@@ -16,7 +21,7 @@ jest.mock('@/common/utils/token-generator', () => ({
 describe('SubscriptionService', () => {
   let subscriptionRepositoryMock: jest.Mocked<ISubscriptionRepository>;
   let weatherApiServiceMock: jest.Mocked<IWeatherProvider>;
-  let notificationServiceMock: jest.Mocked<INotificationService>;
+  let eventBusMock: jest.Mocked<EventBus>;
   let configMock: { appUrl: string };
   let subscriptionService: SubscriptionService;
 
@@ -71,13 +76,27 @@ describe('SubscriptionService', () => {
       searchCity: jest.fn(),
     } as jest.Mocked<IWeatherProvider>;
 
-    notificationServiceMock = {
-      sendWeatherNotification: jest.fn(),
-      sendSubscriptionConfirmation: jest.fn(),
-      sendSubscriptionConfirmed: jest.fn(),
-      sendSubscriptionCancellation: jest.fn(),
-      broadcast: jest.fn(),
-    } as jest.Mocked<INotificationService>;
+    eventBusMock = {
+      publish: jest.fn().mockResolvedValue(undefined),
+      subscribe: jest.fn(),
+      unsubscribe: jest.fn(),
+      getHandlerCount: jest.fn(),
+      removeAllListeners: jest.fn(),
+      emit: jest.fn(),
+      on: jest.fn(),
+      once: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      off: jest.fn(),
+      setMaxListeners: jest.fn(),
+      getMaxListeners: jest.fn(),
+      listeners: jest.fn(),
+      rawListeners: jest.fn(),
+      listenerCount: jest.fn(),
+      prependListener: jest.fn(),
+      prependOnceListener: jest.fn(),
+      eventNames: jest.fn(),
+    } as unknown as jest.Mocked<EventBus>;
 
     configMock = { appUrl: 'https://example.com' };
 
@@ -89,7 +108,7 @@ describe('SubscriptionService', () => {
     subscriptionService = new SubscriptionService(
       subscriptionRepositoryMock,
       weatherApiServiceMock,
-      notificationServiceMock,
+      eventBusMock,
       configMock,
     );
 
@@ -110,12 +129,14 @@ describe('SubscriptionService', () => {
       expect(tokenGenerator.generateConfirmationToken).toHaveBeenCalled();
       expect(tokenGenerator.generateRevokeToken).toHaveBeenCalled();
       expect(subscriptionRepositoryMock.save).toHaveBeenCalledWith(expect.any(Subscription));
-      expect(notificationServiceMock.sendSubscriptionConfirmation).toHaveBeenCalledWith({
-        email: mockEmail,
-        confirmationUrl: `${configMock.appUrl}/api/confirm/confirmation-token`,
-        cityFullName: mockSubscription.city.fullName,
-        frequency: mockFrequency,
-      });
+      expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SubscriptionCreatedEvent));
+
+      const publishedEvent = eventBusMock.publish.mock.calls[0][0] as SubscriptionCreatedEvent;
+      expect(publishedEvent.eventType).toBe(SubscriptionCreatedEvent.EVENT_TYPE);
+      expect(publishedEvent.email).toBe(mockEmail);
+      expect(publishedEvent.confirmationUrl).toBe(`${configMock.appUrl}/api/confirm/confirmation-token`);
+      expect(publishedEvent.frequency).toBe(mockFrequency);
+      expect(publishedEvent.cityFullName).toBe(mockSubscription.city.fullName);
     });
 
     it('should call token generator functions', async () => {
@@ -145,7 +166,7 @@ describe('SubscriptionService', () => {
       );
       expect(subscriptionRepositoryMock.findByEmail).toHaveBeenCalledWith(mockEmail);
       expect(subscriptionRepositoryMock.save).not.toHaveBeenCalled();
-      expect(notificationServiceMock.sendSubscriptionConfirmation).not.toHaveBeenCalled();
+      expect(eventBusMock.publish).not.toHaveBeenCalled();
     });
 
     it('should use the most relevant city from search results', async () => {
@@ -197,7 +218,7 @@ describe('SubscriptionService', () => {
 
       await expect(subscriptionService.subscribe(mockEmail, 'NonExistentCity', mockFrequency)).rejects.toThrow();
       expect(subscriptionRepositoryMock.save).not.toHaveBeenCalled();
-      expect(notificationServiceMock.sendSubscriptionConfirmation).not.toHaveBeenCalled();
+      expect(eventBusMock.publish).not.toHaveBeenCalled();
     });
   });
 
@@ -214,25 +235,16 @@ describe('SubscriptionService', () => {
           confirmationToken: null,
         }),
       );
-      expect(notificationServiceMock.sendSubscriptionConfirmed).toHaveBeenCalledWith({
-        email: mockSubscription.email,
-        cityFullName: mockSubscription.city.fullName,
-        frequency: mockSubscription.frequency.toLowerCase(),
-        unsubscribeUrl: `${configMock.appUrl}/api/unsubscribe/${mockSubscription.revokeToken}`,
-      });
-    });
+      expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SubscriptionConfirmedEvent));
 
-    it('should call email template service with correct data', async () => {
-      subscriptionRepositoryMock.findByConfirmationToken.mockResolvedValue(mockSubscription);
-
-      await subscriptionService.confirmSubscription(mockToken);
-
-      expect(notificationServiceMock.sendSubscriptionConfirmed).toHaveBeenCalledWith({
-        email: mockSubscription.email,
-        cityFullName: mockSubscription.city.fullName,
-        frequency: mockSubscription.frequency.toLowerCase(),
-        unsubscribeUrl: `${configMock.appUrl}/api/unsubscribe/${mockSubscription.revokeToken}`,
-      });
+      const publishedEvent = eventBusMock.publish.mock.calls[0][0] as SubscriptionConfirmedEvent;
+      expect(publishedEvent.eventType).toBe(SubscriptionConfirmedEvent.EVENT_TYPE);
+      expect(publishedEvent.email).toBe(mockSubscription.email);
+      expect(publishedEvent.cityFullName).toBe(mockSubscription.city.fullName);
+      expect(publishedEvent.frequency).toBe(mockSubscription.frequency.toLowerCase());
+      expect(publishedEvent.unsubscribeUrl).toBe(
+        `${configMock.appUrl}/api/unsubscribe/${mockSubscription.revokeToken}`,
+      );
     });
 
     it('should throw TokenNotFoundError when confirmation token is invalid', async () => {
@@ -240,7 +252,7 @@ describe('SubscriptionService', () => {
 
       await expect(subscriptionService.confirmSubscription('invalid-token')).rejects.toThrow(TokenNotFoundError);
       expect(subscriptionRepositoryMock.save).not.toHaveBeenCalled();
-      expect(notificationServiceMock.sendSubscriptionConfirmed).not.toHaveBeenCalled();
+      expect(eventBusMock.publish).not.toHaveBeenCalled();
     });
   });
 
@@ -253,24 +265,13 @@ describe('SubscriptionService', () => {
 
       expect(subscriptionRepositoryMock.findByRevokeToken).toHaveBeenCalledWith(revokeToken);
       expect(subscriptionRepositoryMock.deleteByRevokeToken).toHaveBeenCalledWith(revokeToken);
-      expect(notificationServiceMock.sendSubscriptionCancellation).toHaveBeenCalledWith({
-        email: mockSubscription.email,
-        cityFullName: mockSubscription.city.fullName,
-        frequency: mockSubscription.frequency.toLowerCase(),
-      });
-    });
+      expect(eventBusMock.publish).toHaveBeenCalledWith(expect.any(SubscriptionCancelledEvent));
 
-    it('should call email template service with correct data for cancellation', async () => {
-      const revokeToken = 'revoke-token-123';
-      subscriptionRepositoryMock.findByRevokeToken.mockResolvedValue(mockSubscription);
-
-      await subscriptionService.unsubscribe(revokeToken);
-
-      expect(notificationServiceMock.sendSubscriptionCancellation).toHaveBeenCalledWith({
-        email: mockSubscription.email,
-        cityFullName: mockSubscription.city.fullName,
-        frequency: mockSubscription.frequency.toLowerCase(),
-      });
+      const publishedEvent = eventBusMock.publish.mock.calls[0][0] as SubscriptionCancelledEvent;
+      expect(publishedEvent.eventType).toBe(SubscriptionCancelledEvent.EVENT_TYPE);
+      expect(publishedEvent.email).toBe(mockSubscription.email);
+      expect(publishedEvent.cityFullName).toBe(mockSubscription.city.fullName);
+      expect(publishedEvent.frequency).toBe(mockSubscription.frequency.toLowerCase());
     });
 
     it('should throw TokenNotFoundError when revoke token is invalid', async () => {
@@ -278,7 +279,7 @@ describe('SubscriptionService', () => {
 
       await expect(subscriptionService.unsubscribe('invalid-token')).rejects.toThrow(TokenNotFoundError);
       expect(subscriptionRepositoryMock.deleteByRevokeToken).not.toHaveBeenCalled();
-      expect(notificationServiceMock.sendSubscriptionCancellation).not.toHaveBeenCalled();
+      expect(eventBusMock.publish).not.toHaveBeenCalled();
     });
   });
 });

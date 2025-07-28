@@ -1,5 +1,6 @@
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { MetricsService } from '@/common/metrics/metrics.service';
+import { INotificationService } from '@/modules/notification';
 import { GmailEmailingService } from '@/modules/notification/infrastructure/email/gmail-emailing.service';
 import { ISubscriptionRepository } from '@/modules/subscription/domain/interfaces/subscription.repository';
 import { IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
@@ -36,3 +37,10 @@ export const mockMetricsService = {
   incrementCacheMisses: jest.fn(),
   startSetDurationTimer: jest.fn(),
 } as unknown as jest.Mocked<MetricsService>;
+
+export const mockNotificationService = {
+  sendWeatherNotification: jest.fn(),
+  sendSubscriptionConfirmation: jest.fn(),
+  sendSubscriptionConfirmed: jest.fn(),
+  sendSubscriptionCancellation: jest.fn(),
+} as unknown as jest.Mocked<INotificationService>;

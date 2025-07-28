@@ -3,8 +3,13 @@ import 'reflect-metadata';
 import { createApp } from '@/app';
 import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
 import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
+import { EventBus } from '@/common/events/event-bus';
+import { SubscriptionCreatedEvent, SubscriptionConfirmedEvent, SubscriptionCancelledEvent } from '@/common/events';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
+import { SubscriptionEventConsumer } from '@/modules/notification/application/consumers/subscription-event.consumer';
+import { NotificationService } from '@/modules/notification/application/services/notification.service';
+import { EmailTemplateService } from '@/modules/notification/infrastructure/templates/email-template.service';
 import { PrismaClient } from '@prisma/client';
 import { DependencyContainer } from 'tsyringe';
 import request from 'supertest';
@@ -47,6 +52,31 @@ describe('App E2E Tests', () => {
     // Register real Redis cache provider for full integration testing
     cacheProvider = new RedisCacheProvider(redisSetup.redisUrl);
     testContainer.registerInstance('CacheProvider', cacheProvider);
+
+    // Register NotificationService and EmailTemplateService to ensure proper dependency injection
+    testContainer.registerSingleton('EmailTemplateService', EmailTemplateService);
+    testContainer.registerSingleton('NotificationService', NotificationService);
+
+    // Register EventBus and SubscriptionEventConsumer as singletons
+    testContainer.registerSingleton('EventBus', EventBus);
+    testContainer.registerSingleton('SubscriptionEventConsumer', SubscriptionEventConsumer);
+
+    // Initialize event consumers with test container
+    const testEventBus = testContainer.resolve<EventBus>('EventBus');
+    const testSubscriptionEventConsumer = testContainer.resolve<SubscriptionEventConsumer>('SubscriptionEventConsumer');
+
+    testEventBus.subscribe(
+      SubscriptionCreatedEvent.EVENT_TYPE,
+      testSubscriptionEventConsumer.getSubscriptionCreatedHandler(),
+    );
+    testEventBus.subscribe(
+      SubscriptionConfirmedEvent.EVENT_TYPE,
+      testSubscriptionEventConsumer.getSubscriptionConfirmedHandler(),
+    );
+    testEventBus.subscribe(
+      SubscriptionCancelledEvent.EVENT_TYPE,
+      testSubscriptionEventConsumer.getSubscriptionCancelledHandler(),
+    );
 
     app = createApp(testContainer);
     prisma = dbSetup.prisma;
@@ -105,6 +135,9 @@ describe('App E2E Tests', () => {
 
       expect(subscribeResponse.status).toBe(200);
       expect(subscribeResponse.body).toHaveProperty('message', 'Subscription successful. Confirmation email sent.');
+
+      // Wait for async event processing and verify email was sent
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(mockEmailingService.sendEmail).toHaveBeenCalled();
 
       // Step 2: Get subscription from database to get confirmation token
