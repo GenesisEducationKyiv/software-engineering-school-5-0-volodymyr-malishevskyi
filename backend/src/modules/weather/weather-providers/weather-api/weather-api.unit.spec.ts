@@ -1,5 +1,5 @@
 import { CityNotFoundError, WeatherApiError } from './errors/weather-api';
-import { WeatherApiService } from './weather-api';
+import { WeatherApiProvider } from './weather-api';
 
 const mockHttpClient = {
   get: jest.fn(),
@@ -14,8 +14,8 @@ beforeEach(() => {
   mockHttpClient.get.mockClear();
 });
 
-describe('WeatherApiService', () => {
-  const weatherApiService = new WeatherApiService(mockHttpClient, {
+describe('WeatherApiProvider', () => {
+  const weatherApiProvider = new WeatherApiProvider(mockHttpClient, {
     apiKey: 'test-api-key',
   });
 
@@ -37,7 +37,7 @@ describe('WeatherApiService', () => {
       headers: new Headers(),
     });
 
-    const weather = await weatherApiService.getWeatherByCity('Kyiv');
+    const weather = await weatherApiProvider.getWeatherByCity('Kyiv');
 
     expect(weather).toEqual({
       city: 'Kyiv',
@@ -61,7 +61,7 @@ describe('WeatherApiService', () => {
         'Content-Type': 'application/json',
       }),
     });
-    await expect(weatherApiService.getWeatherByCity('InvalidCity')).rejects.toThrow(CityNotFoundError);
+    await expect(weatherApiProvider.getWeatherByCity('InvalidCity')).rejects.toThrow(CityNotFoundError);
   });
 
   it('should handle non-JSON error response', async () => {
@@ -74,6 +74,6 @@ describe('WeatherApiService', () => {
       }),
     });
 
-    await expect(weatherApiService.getWeatherByCity('Some city')).rejects.toThrow(WeatherApiError);
+    await expect(weatherApiProvider.getWeatherByCity('Some city')).rejects.toThrow(WeatherApiError);
   });
 });

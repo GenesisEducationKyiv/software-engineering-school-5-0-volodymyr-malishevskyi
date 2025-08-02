@@ -1,8 +1,14 @@
-import { PrismaClient, Subscription } from '@/lib/prisma';
+import { PrismaClientInstance, Subscription } from '@/lib/prisma';
+import 'reflect-metadata';
+import { inject, injectable } from 'tsyringe';
 import { CreateSubscriptionData, ISubscriptionRepository } from '../types/subscription-repository';
 
+@injectable()
 export default class SubscriptionRepository implements ISubscriptionRepository {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    @inject('PrismaClient')
+    private prisma: PrismaClientInstance,
+  ) {}
 
   async findByEmail(email: string) {
     return await this.prisma.subscription.findUnique({

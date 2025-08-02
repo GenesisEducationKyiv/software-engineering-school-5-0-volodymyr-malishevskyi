@@ -1,27 +1,46 @@
-jest.mock('@/config', () => {
-  return {
-    __esModule: true,
-    default: {},
-  };
-});
+import { ConfigFactory } from '@/config/config-factory';
+
+const config = ConfigFactory.createTestConfig();
 
 import { createApp } from '@/app';
-import { Weather } from '@/common/interfaces/weather-api-service';
+import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
+import { MetricsService } from '@/common/metrics/metrics.service';
 import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { WeatherApiService } from '@/common/services/weather-api/weather-api';
+import { container } from '@/container';
+import { SubscriptionRepository } from '@/modules/subscription';
+import { SubscriptionController } from '@/modules/subscription/subscription.controller';
+import { SubscriptionService } from '@/modules/subscription/subscription.service';
+import { WeatherController, WeatherService } from '@/modules/weather';
+import { CachedWeatherProvider } from '@/modules/weather/weather-providers/cached-weather-provider';
+import { IWeatherProvider, Weather } from '@/modules/weather/weather-providers/types/weather-provider';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 
-const mockWeatherApiService = {
-  getWeatherByCity: jest.fn(),
-  searchCity: jest.fn(),
-} as unknown as jest.Mocked<WeatherApiService>;
-
 const mockEmailingService = {
   sendEmail: jest.fn(),
 } as unknown as jest.Mocked<GmailEmailingService>;
+
+const mockWeatherApiService = {
+  getWeatherByCity: jest.fn(),
+  searchCity: jest.fn(),
+} as jest.Mocked<IWeatherProvider>;
+
+const mockCacheProvider = {
+  get: jest.fn(),
+  set: jest.fn(),
+  delete: jest.fn(),
+  clear: jest.fn(),
+} as unknown as jest.Mocked<ICacheProvider>;
+
+const mockMetricsService = {
+  getMetrics: jest.fn(),
+  getRegistry: jest.fn(),
+  incrementCacheHits: jest.fn(),
+  incrementCacheMisses: jest.fn(),
+  startSetDurationTimer: jest.fn(),
+} as unknown as jest.Mocked<MetricsService>;
 
 describe('Subscription Integration Tests', () => {
   let app: App;
@@ -31,14 +50,45 @@ describe('Subscription Integration Tests', () => {
     // Setup test database
     const dbSetup = await setupTestDatabase();
 
-    app = createApp({
-      weatherApiService: mockWeatherApiService,
-      emailingService: mockEmailingService,
-      config: {
-        appUrl: 'http://localhost:3000',
-      },
-      prisma: dbSetup.prisma,
-    });
+    container.clearInstances();
+    container.reset();
+
+    container.registerInstance('PrismaClient', dbSetup.prisma);
+
+    // Register config
+    container.registerInstance('Config', config);
+
+    // Register Metrics
+    container.registerInstance('MetricsService', mockMetricsService);
+
+    // Register mock services
+    // container.registerInstance('WeatherApiProvider', mockWeatherApiService);
+    // container.registerInstance('OpenWeatherMapProvider', mockWeatherApiService);
+    container.registerInstance('EmailingService', mockEmailingService);
+
+    // Register dependencies for CachedWeatherProvider
+    container.registerInstance('WeatherProvider', mockWeatherApiService);
+    container.registerInstance('CacheProvider', mockCacheProvider);
+
+    // Register CachedWeatherProvider as singleton (not instance)
+    container.registerSingleton('CachedWeatherProvider', CachedWeatherProvider);
+
+    // Register CachedWeatherService as singleton (not instance)
+    container.registerSingleton('WeatherService', WeatherService);
+
+    // Register WeatherController as singleton (not instance)
+    container.registerSingleton('WeatherController', WeatherController);
+
+    // Register mock subscription repository
+    container.registerSingleton('SubscriptionRepository', SubscriptionRepository);
+
+    // Register SubscriptionService as singleton
+    container.registerSingleton('SubscriptionService', SubscriptionService);
+
+    // Register SubscriptionController as singleton
+    container.registerSingleton('SubscriptionController', SubscriptionController);
+
+    app = createApp(container);
 
     prisma = dbSetup.prisma;
   }, 60000);
@@ -50,6 +100,7 @@ describe('Subscription Integration Tests', () => {
 
   beforeEach(async () => {
     // Reset mocks before each test
+    jest.clearAllMocks();
 
     // Clean database before each test
     await prisma.subscription.deleteMany();
@@ -77,6 +128,28 @@ describe('Subscription Integration Tests', () => {
       humidity: 65,
       shortDescription: 'Sunny',
     } as Weather);
+
+    // mockOpenWeatherService.searchCity = jest.fn().mockResolvedValue([
+    //   {
+    //     id: 123,
+    //     name: 'Kyiv',
+    //     region: 'Kyiv Oblast',
+    //     country: 'Ukraine',
+    //     lat: 50.45,
+    //     lon: 30.52,
+    //     url: 'kyiv-ukraine',
+    //   },
+    // ]);
+
+    // mockOpenWeatherService.getWeatherByCity = jest.fn().mockResolvedValue({
+    //   city: 'Kyiv',
+    //   temperature: {
+    //     c: 25,
+    //     f: 77,
+    //   },
+    //   humidity: 65,
+    //   shortDescription: 'Sunny',
+    // } as Weather);
 
     mockEmailingService.sendEmail = jest.fn().mockResolvedValue(undefined);
   });

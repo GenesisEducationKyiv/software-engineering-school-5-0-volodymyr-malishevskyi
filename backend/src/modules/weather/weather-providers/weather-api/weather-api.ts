@@ -1,18 +1,18 @@
 import { HttpClient, HttpResponse } from '@/common/http-client'; // Додано HttpResponse
-import { City, IWeatherApiService, Weather } from '@/common/interfaces/weather-api-service';
+import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/types/weather-provider';
 import { CityNotFoundError, WeatherApiError } from './errors/weather-api';
 import { CityResponse, ErrorCode, ErrorResponse, WeatherResponse } from './types/weather-api';
 
 const BASE_URL = 'https://api.weatherapi.com';
 
-export interface WeatherApiServiceConfig {
+export interface WeatherApiProviderConfig {
   apiKey: string;
 }
 
-export class WeatherApiService implements IWeatherApiService {
+export class WeatherApiProvider implements IWeatherProvider {
   constructor(
     private httpClient: HttpClient,
-    private config: WeatherApiServiceConfig,
+    private config: WeatherApiProviderConfig,
   ) {}
 
   async getWeatherByCity(city: string): Promise<Weather> {

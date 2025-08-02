@@ -1,6 +1,8 @@
 import { IEmailingService } from '@/common/interfaces/emailing-service';
-import { IWeatherApiService } from '@/common/interfaces/weather-api-service';
+import { IWeatherProvider } from '@/modules/weather/weather-providers/types/weather-provider';
+import { CityNotFoundError } from '@/modules/weather/weather-providers/weather-api/errors/weather-api';
 import crypto from 'crypto';
+import { inject, injectable } from 'tsyringe';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { ISubscriptionRepository } from './types/subscription-repository';
 
@@ -10,14 +12,32 @@ function generateToken(length: number): string {
   return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
+/**
+ * Subscription Service
+ *
+ * Manages weather subscriptions including creation, confirmation, and cancellation.
+ * Uses dependency injection for weather provider, email service, and configuration.
+ */
+@injectable()
 export class SubscriptionService {
   constructor(
+    @inject('SubscriptionRepository')
     private subscriptionRepository: ISubscriptionRepository,
-    private weatherApiService: IWeatherApiService,
+    @inject('CachedWeatherProvider')
+    private weatherProvider: IWeatherProvider,
+    @inject('EmailingService')
     private emailingService: IEmailingService,
+    @inject('Config')
     private readonly config: { appUrl: string },
   ) {}
 
+  /**
+   * Subscribe a user to weather updates
+   *
+   * @param email - User's email address
+   * @param city - City name for weather updates
+   * @param frequency - Update frequency (daily or hourly)
+   */
   async subscribe(email: string, city: string, frequency: 'daily' | 'hourly'): Promise<void> {
     const existingSubscription = await this.subscriptionRepository.findByEmail(email);
 
@@ -25,9 +45,13 @@ export class SubscriptionService {
       throw new EmailAlreadySubscribed();
     }
 
-    const cities = await this.weatherApiService.searchCity(city);
+    const cities = await this.weatherProvider.searchCity(city);
 
     const mostRelevantCity = cities[0];
+
+    if (!mostRelevantCity) {
+      throw new CityNotFoundError();
+    }
 
     const confirmationToken = generateToken(TOKEN_LENGTH);
     const revokeToken = generateToken(TOKEN_LENGTH);
@@ -67,6 +91,11 @@ export class SubscriptionService {
     });
   }
 
+  /**
+   * Confirm a subscription using the confirmation token
+   *
+   * @param token - Confirmation token from email
+   */
   async confirmSubscription(token: string): Promise<void> {
     const subscription = await this.subscriptionRepository.findByConfirmationToken(token);
 
@@ -93,6 +122,11 @@ export class SubscriptionService {
     });
   }
 
+  /**
+   * Unsubscribe a user using the revoke token
+   *
+   * @param token - Revoke token from email
+   */
   async unsubscribe(token: string): Promise<void> {
     const subscription = await this.subscriptionRepository.findByRevokeToken(token);
 
@@ -104,14 +138,14 @@ export class SubscriptionService {
 
     this.emailingService.sendEmail({
       to: subscription.email,
-      subject: 'Weather Subscription Successfully Unsubscribed!',
+      subject: 'Weather Subscription Cancelled',
       html: `
-        <p>Your subscription successfully unsubscribed!</p>
+        <p>Your weather subscription has been cancelled.</p>
         <br>
         <p>City: ${subscription.city.fullName}</p>
         <p>Frequency: ${subscription.frequency.toLowerCase()}</p>
         <br>
-        <p>You always can <a href="${this.config.appUrl}/api/unsubscribe/${subscription.revokeToken}">Unsubscribe</a></p>
+        <p>You can always subscribe again at any time.</p>
       `,
     });
   }
