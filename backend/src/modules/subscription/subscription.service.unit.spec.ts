@@ -1,5 +1,5 @@
 import { IEmailingService } from '@/common/interfaces/emailing-service';
-import { City, IWeatherApiService } from '@/common/interfaces/weather-api-service';
+import { City, IWeatherProvider } from '@/modules/weather/weather-providers/weather-provider';
 import { EmailAlreadySubscribed, TokenNotFound } from './errors/subscription-service';
 import { SubscriptionService } from './subscription.service';
 import { ISubscriptionRepository, SubscriptionWithCity } from './types/subscription-repository';
@@ -10,7 +10,7 @@ jest.mock('crypto', () => ({
 
 describe('SubscriptionService', () => {
   let subscriptionRepositoryMock: jest.Mocked<ISubscriptionRepository>;
-  let weatherApiServiceMock: jest.Mocked<IWeatherApiService>;
+  let weatherApiServiceMock: jest.Mocked<IWeatherProvider>;
   let emailingServiceMock: jest.Mocked<IEmailingService>;
   let configMock: { appUrl: string };
   let subscriptionService: SubscriptionService;
@@ -67,7 +67,7 @@ describe('SubscriptionService', () => {
     weatherApiServiceMock = {
       getWeatherByCity: jest.fn(),
       searchCity: jest.fn(),
-    } as jest.Mocked<IWeatherApiService>;
+    } as jest.Mocked<IWeatherProvider>;
 
     emailingServiceMock = {
       sendEmail: jest.fn(),

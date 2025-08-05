@@ -1,8 +1,8 @@
-import { IWeatherApiService } from '@/common/interfaces/weather-api-service';
+import { IWeatherProvider } from '@/modules/weather/weather-providers/weather-provider';
 import { WeatherResponse } from './types/weather';
 
 export class WeatherService {
-  constructor(private weatherApiService: IWeatherApiService) {}
+  constructor(private weatherApiService: IWeatherProvider) {}
 
   async getWeatherByCity(city: string): Promise<WeatherResponse> {
     const weather = await this.weatherApiService.getWeatherByCity(city);
