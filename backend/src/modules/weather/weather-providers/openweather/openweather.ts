@@ -1,18 +1,18 @@
 import { HttpClient, HttpResponse } from '@/common/http-client';
-import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/weather-provider';
+import { City, IWeatherProvider, Weather } from '@/modules/weather/weather-providers/types/weather-provider';
 import { CityNotFoundError, OpenWeatherError } from './errors/openweather';
 import { OpenWeatherErrorResponse, OpenWeatherResponse, OpenWeatherSearchResponse } from './types/openweather';
 
 const BASE_URL = 'https://api.openweathermap.org';
 
-export interface OpenWeatherServiceConfig {
+export interface OpenWeatherProviderConfig {
   apiKey: string;
 }
 
-export class OpenWeatherService implements IWeatherProvider {
+export class OpenWeatherMapProvider implements IWeatherProvider {
   constructor(
     private httpClient: HttpClient,
-    private config: OpenWeatherServiceConfig,
+    private config: OpenWeatherProviderConfig,
   ) {}
 
   async getWeatherByCity(city: string): Promise<Weather> {

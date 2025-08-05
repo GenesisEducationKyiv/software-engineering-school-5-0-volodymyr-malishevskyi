@@ -1,14 +1,20 @@
-import { PrismaClient } from '@/lib/prisma';
-import { IWeatherProvider } from '../../modules/weather/weather-providers/weather-provider';
+import { injectable, inject } from 'tsyringe';
+import { PrismaClientInstance } from '@/lib/prisma';
+import { WeatherService } from '@/modules/weather/weather.service';
 import { IEmailingService } from '../interfaces/emailing-service';
 import delay from '../utils/delay';
 import logger from './logger';
 
+@injectable()
 export class WeatherBroadcastService {
   constructor(
-    private prisma: PrismaClient,
-    private readonly weatherApiService: IWeatherProvider,
+    @inject('PrismaClient')
+    private prisma: PrismaClientInstance,
+    @inject('WeatherService')
+    private readonly weatherService: WeatherService,
+    @inject('EmailingService')
     private readonly emailingService: IEmailingService,
+    @inject('Config')
     private readonly config: { sendingDelay: number } = { sendingDelay: 1000 },
   ) {}
 
@@ -43,11 +49,11 @@ export class WeatherBroadcastService {
     }
 
     for (const [cityFullName, emails] of citySubscriptions) {
-      const weather = await this.weatherApiService.getWeatherByCity(cityFullName);
+      const weather = await this.weatherService.getWeatherByCity(cityFullName);
 
       const emailContent = `
           <h1>Weather Update for ${cityFullName}</h1>
-          <p>Temperature: ${weather.temperature.c}°C</p>
+          <p>Temperature: ${weather.temperature}°C</p>
           <p>Humidity: ${weather.humidity}%</p>
         `;
 
