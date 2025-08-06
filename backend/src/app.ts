@@ -1,48 +1,37 @@
 import cors from 'cors';
 import express from 'express';
-import { IEmailingService } from './common/interfaces/emailing-service';
-import { IWeatherApiService } from './common/interfaces/weather-api-service';
-import errorHandleMiddleware from './common/middlewares/error-handle';
-import { PrismaClient } from './lib/prisma';
-import {
-  SubscriptionController,
-  SubscriptionRepository,
-  subscriptionRouterFactory,
-  SubscriptionService,
-} from './modules/subscription';
-import { WeatherController, weatherRouterFactory, WeatherService } from './modules/weather';
+import { MetricsService } from './common/metrics/metrics.service';
+import errorHandleMiddleware from './common/middlewares/error-handler';
+import requestLoggingMiddleware from './common/middlewares/request-logging';
+import { DependencyContainer } from './container';
+import { subscriptionRouterFactory } from './modules/subscription';
+import { SubscriptionController } from './modules/subscription/presentation/subscription.controller';
+import { weatherRouterFactory } from './modules/weather';
+import { WeatherController } from './modules/weather/presentation/weather.controller';
 
-export function createApp(dependencies: {
-  config: {
-    appUrl: string;
-  };
-  weatherApiService: IWeatherApiService;
-  emailingService: IEmailingService;
-  prisma: PrismaClient;
-}) {
+export function createApp(container: DependencyContainer) {
   const app = express();
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cors());
+  app.use(requestLoggingMiddleware);
 
   // Weather Module
-  const weatherService = new WeatherService(dependencies.weatherApiService);
-  const weatherController = new WeatherController(weatherService);
+  const weatherController = container.resolve('WeatherController') as WeatherController;
   app.use('/api', weatherRouterFactory(weatherController));
 
   // Subscription Module
-  const subscriptionRepository = new SubscriptionRepository(dependencies.prisma);
-  const subscriptionService = new SubscriptionService(
-    subscriptionRepository,
-    dependencies.weatherApiService,
-    dependencies.emailingService,
-    {
-      appUrl: dependencies.config.appUrl,
-    },
-  );
-  const subscriptionController = new SubscriptionController(subscriptionService);
+  const subscriptionController = container.resolve('SubscriptionController') as SubscriptionController;
   app.use('/api', subscriptionRouterFactory(subscriptionController));
+
+  // Metrics Module
+  const metricsService = container.resolve('MetricsService') as MetricsService;
+  const prometheusRegistry = metricsService.getRegistry();
+  app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', prometheusRegistry.contentType);
+    res.end(await prometheusRegistry.metrics());
+  });
 
   // Error handling middleware
   app.use(errorHandleMiddleware);

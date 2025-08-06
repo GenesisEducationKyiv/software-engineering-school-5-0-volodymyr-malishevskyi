@@ -1,63 +1,79 @@
-jest.mock('@/config', () => {
-  return {
-    __esModule: true,
-    default: {},
-  };
-});
+import 'reflect-metadata';
 
 import { createApp } from '@/app';
-import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { WeatherApiService } from '@/common/services/weather-api/weather-api';
+import { ICacheProvider } from '@/common/cache/interfaces/cache-provider';
+import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
+import { ConfigFactory } from '@/config/config-factory';
+import { container } from '@/container';
 import { PrismaClient } from '@prisma/client';
+import { DependencyContainer } from 'tsyringe';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
+import { setupTestRedis, teardownTestRedis } from '../helpers/test-redis';
+import { mockEmailingService, mockWeatherProvider, mockMetricsService } from '../helpers/mocks';
 
-const mockWeatherApiService = {
-  getWeatherByCity: jest.fn(),
-  searchCity: jest.fn(),
-} as unknown as jest.Mocked<WeatherApiService>;
-
-const mockEmailingService = {
-  sendEmail: jest.fn(),
-} as unknown as jest.Mocked<GmailEmailingService>;
+// Mock token generator utility with unique tokens
+jest.mock('@/common/utils/token-generator', () => ({
+  generateConfirmationToken: jest.fn(() => `confirmation-${Date.now()}-${Math.random()}`),
+  generateRevokeToken: jest.fn(() => `revoke-${Date.now()}-${Math.random()}`),
+  generateToken: jest.fn((length: number) => `token-${Date.now()}-${Math.random()}`.slice(0, length)),
+}));
 
 describe('App E2E Tests', () => {
   let app: App;
   let prisma: PrismaClient;
+  let cacheProvider: ICacheProvider;
+  let testContainer: DependencyContainer;
 
   beforeAll(async () => {
-    // Setup test database
+    // Setup test database and Redis
     const dbSetup = await setupTestDatabase();
+    const redisSetup = await setupTestRedis();
 
-    app = createApp({
-      weatherApiService: mockWeatherApiService,
-      emailingService: mockEmailingService,
-      config: {
-        appUrl: 'http://localhost:3000',
-      },
-      prisma: dbSetup.prisma,
-    });
+    // Create child container from main container
+    testContainer = container.createChildContainer();
 
+    // Register test config and database
+    const config = ConfigFactory.createTestConfig();
+    testContainer.registerInstance('Config', config);
+    testContainer.registerInstance('PrismaClient', dbSetup.prisma);
+
+    // Override services with mocks
+    testContainer.registerInstance('MetricsService', mockMetricsService);
+    testContainer.registerInstance('EmailingService', mockEmailingService);
+    testContainer.registerInstance('WeatherProvider', mockWeatherProvider);
+
+    // Register real Redis cache provider for full integration testing
+    cacheProvider = new RedisCacheProvider(redisSetup.redisUrl);
+    testContainer.registerInstance('CacheProvider', cacheProvider);
+
+    app = createApp(testContainer);
     prisma = dbSetup.prisma;
   }, 60000);
 
   afterAll(async () => {
     // Clean up resources
+    if (cacheProvider && typeof cacheProvider.disconnect === 'function') {
+      await cacheProvider.disconnect();
+    }
     await teardownTestDatabase();
+    await teardownTestRedis();
   });
 
   beforeEach(async () => {
-    // Reset mocks and clean database before each test
-    mockWeatherApiService.getWeatherByCity.mockClear();
-    mockWeatherApiService.searchCity.mockClear();
-    mockEmailingService.sendEmail.mockClear();
+    // Reset all mocks before each test
+    jest.clearAllMocks();
 
     await prisma.subscription.deleteMany();
     await prisma.city.deleteMany();
 
+    // Clear Redis cache before each test
+    const cacheProvider = testContainer.resolve<ICacheProvider>('CacheProvider');
+    await cacheProvider.clear();
+
     // Setup mocks with default implementations
-    mockWeatherApiService.searchCity = jest.fn().mockResolvedValue([
+    mockWeatherProvider.searchCity = jest.fn().mockResolvedValue([
       {
         id: 123,
         name: 'Kyiv',
@@ -69,7 +85,7 @@ describe('App E2E Tests', () => {
       },
     ]);
 
-    mockWeatherApiService.getWeatherByCity = jest.fn().mockResolvedValue({
+    mockWeatherProvider.getWeatherByCity = jest.fn().mockResolvedValue({
       city: 'Kyiv',
       temperature: {
         c: 25,
@@ -111,9 +127,13 @@ describe('App E2E Tests', () => {
       const subscribeEmailCallArgs = mockEmailingService.sendEmail.mock.calls[0][0];
       expect(subscribeEmailCallArgs.to).toBe('user@example.com');
       expect(subscribeEmailCallArgs.subject).toBe('Weather Subscription Confirmation');
+      expect(subscribeEmailCallArgs.html).toContain('Weather Subscription Confirmation');
+      expect(subscribeEmailCallArgs.html).toContain('Confirm Subscription');
       expect(subscribeEmailCallArgs.html).toContain(
         `http://localhost:3000/api/confirm/${pendingSubscription?.confirmationToken}`,
       );
+      expect(subscribeEmailCallArgs.html).toContain('<strong>City:</strong> Kyiv, Kyiv Oblast, Ukraine');
+      expect(subscribeEmailCallArgs.html).toContain('<strong>Frequency:</strong> daily');
 
       // Step 3: Confirm subscription
       const confirmResponse = await request(app).get(`/api/confirm/${pendingSubscription!.confirmationToken}`);
@@ -135,8 +155,14 @@ describe('App E2E Tests', () => {
       const confirmationEmailCallArgs = mockEmailingService.sendEmail.mock.calls[1][0];
       expect(confirmationEmailCallArgs.to).toBe('user@example.com');
       expect(confirmationEmailCallArgs.subject).toBe('Weather Subscription Successfully Confirmed!');
-      expect(confirmationEmailCallArgs.html).toContain(`City: ${confirmedSubscription?.city.fullName}`);
-      expect(confirmationEmailCallArgs.html).toContain(`Frequency: ${confirmedSubscription?.frequency.toLowerCase()}`);
+      expect(confirmationEmailCallArgs.html).toContain('Subscription Successfully Confirmed!');
+      expect(confirmationEmailCallArgs.html).toContain(
+        `<strong>City:</strong> ${confirmedSubscription?.city.fullName}`,
+      );
+      expect(confirmationEmailCallArgs.html).toContain(
+        `<strong>Frequency:</strong> ${confirmedSubscription?.frequency.toLowerCase()}`,
+      );
+      expect(confirmationEmailCallArgs.html).toContain('Unsubscribe');
       expect(confirmationEmailCallArgs.html).toContain(
         `http://localhost:3000/api/unsubscribe/${confirmedSubscription?.revokeToken}`,
       );
@@ -165,9 +191,11 @@ describe('App E2E Tests', () => {
       // Verify unsubscribe email
       const unsubscribeEmailCallArgs = mockEmailingService.sendEmail.mock.calls[2][0];
       expect(unsubscribeEmailCallArgs.to).toBe('user@example.com');
-      expect(unsubscribeEmailCallArgs.subject).toBe('Weather Subscription Successfully Unsubscribed!');
+      expect(unsubscribeEmailCallArgs.subject).toBe('Weather Subscription Cancelled');
+      expect(unsubscribeEmailCallArgs.html).toContain('Weather Subscription Cancelled');
+      expect(unsubscribeEmailCallArgs.html).toContain(`<strong>City:</strong> ${confirmedSubscription?.city.fullName}`);
       expect(unsubscribeEmailCallArgs.html).toContain(
-        `http://localhost:3000/api/unsubscribe/${confirmedSubscription?.revokeToken}`,
+        `<strong>Frequency:</strong> ${confirmedSubscription?.frequency}`,
       );
     });
   });
@@ -175,7 +203,7 @@ describe('App E2E Tests', () => {
   describe('Error Handling', () => {
     it('should handle error scenarios gracefully', async () => {
       // Test invalid city search
-      mockWeatherApiService.searchCity = jest.fn().mockResolvedValue([]);
+      mockWeatherProvider.searchCity = jest.fn().mockResolvedValue([]);
 
       const subscribeResponse = await request(app).post('/api/subscribe').send({
         email: 'user@example.com',
@@ -183,10 +211,10 @@ describe('App E2E Tests', () => {
         frequency: 'daily',
       });
 
-      expect(subscribeResponse.status).toBe(500);
+      expect(subscribeResponse.status).toBe(400);
 
       // Test weather API failures
-      mockWeatherApiService.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));
+      mockWeatherProvider.getWeatherByCity = jest.fn().mockRejectedValue(new Error('API error'));
 
       const weatherResponse = await request(app).get('/api/weather').query({ city: 'Kyiv' });
 

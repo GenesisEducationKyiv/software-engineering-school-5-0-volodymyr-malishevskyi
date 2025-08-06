@@ -10,6 +10,16 @@ jobs:
   tests:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        test-type:
+          - name: "Functional Tests"
+            command: "test"
+          - name: "Architecture Validation"
+            command: "arch:validate"
+
+    name: ${{ matrix.test-type.name }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,6 +35,6 @@ jobs:
         run: npm ci
         working-directory: ./backend
 
-      - name: Run Unit/Integration Tests
-        run: npm run test
+      - name: Run ${{ matrix.test-type.name }}
+        run: npm run ${{ matrix.test-type.command }}
         working-directory: ./backend

@@ -1,54 +1,55 @@
-jest.mock('@/config', () => {
-  return {
-    __esModule: true,
-    default: {},
-  };
-});
+import 'reflect-metadata';
 
 import { createApp } from '@/app';
-import { Weather } from '@/common/interfaces/weather-api-service';
-import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import { CityNotFoundError } from '@/common/services/weather-api/errors/weather-api';
-import { WeatherApiService } from '@/common/services/weather-api/weather-api';
+import { ConfigFactory } from '@/config/config-factory';
+import { container } from '@/container';
+import { Weather } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
+import { WeatherApiCityNotFoundError } from '@/modules/weather/infrastructure/weather-providers/weather-api/errors/weather-api';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
+import { DependencyContainer } from 'tsyringe';
+import {
+  mockCacheProvider,
+  mockEmailingService,
+  mockMetricsService,
+  mockSubscriptionRepository,
+  mockWeatherProvider,
+} from '../helpers/mocks';
 
-const mockWeatherApiService = {
-  getWeatherByCity: jest.fn(),
-  searchCity: jest.fn(),
-} as unknown as jest.Mocked<WeatherApiService>;
-
-const mockEmailingService = {
-  sendEmail: jest.fn(),
-} as unknown as jest.Mocked<GmailEmailingService>;
+// Mock token generator utility
+jest.mock('@/common/utils/token-generator', () => ({
+  generateConfirmationToken: jest.fn().mockReturnValue('test-confirmation-token'),
+  generateRevokeToken: jest.fn().mockReturnValue('test-revoke-token'),
+  generateToken: jest.fn().mockReturnValue('test-token'),
+}));
 
 describe('Weather Integration Tests', () => {
   let app: App;
+  let testContainer: DependencyContainer;
 
   beforeAll(async () => {
-    // Setup test database
-    const dbSetup = await setupTestDatabase();
+    // Create child container from main container
+    testContainer = container.createChildContainer();
 
-    app = createApp({
-      weatherApiService: mockWeatherApiService,
-      emailingService: mockEmailingService,
-      config: {
-        appUrl: 'http://localhost:3000',
-      },
-      prisma: dbSetup.prisma,
-    });
+    // Register test config
+    const config = ConfigFactory.createTestConfig();
+    testContainer.registerInstance('Config', config);
+
+    // Override only the services we want to mock
+    testContainer.registerInstance('MetricsService', mockMetricsService);
+    testContainer.registerInstance('EmailingService', mockEmailingService);
+    testContainer.registerInstance('WeatherProvider', mockWeatherProvider);
+    testContainer.registerInstance('CacheProvider', mockCacheProvider);
+    testContainer.registerInstance('SubscriptionRepository', mockSubscriptionRepository);
+
+    app = createApp(testContainer);
   }, 60000);
 
-  afterAll(async () => {
-    // Clean up resources
-    await teardownTestDatabase();
-  });
+  afterAll(async () => {});
 
   beforeEach(() => {
-    // Reset mocks before each test
-    mockWeatherApiService.getWeatherByCity.mockClear();
-    mockWeatherApiService.searchCity.mockClear();
+    // Reset all mocks before each test
+    jest.clearAllMocks();
   });
 
   describe('GET /api/weather', () => {
@@ -64,8 +65,11 @@ describe('Weather Integration Tests', () => {
         shortDescription: 'Sunny',
       };
 
+      // Mock cache miss
+      mockCacheProvider.get.mockResolvedValue(null);
+
       // Mock implementation
-      mockWeatherApiService.getWeatherByCity = jest.fn().mockResolvedValue(mockWeatherData);
+      mockWeatherProvider.getWeatherByCity.mockResolvedValue(mockWeatherData);
 
       // Act
       const response = await request(app).get('/api/weather').query({ city: 'Kyiv' });
@@ -77,7 +81,21 @@ describe('Weather Integration Tests', () => {
         humidity: 65,
         description: 'Sunny',
       });
-      expect(mockWeatherApiService.getWeatherByCity).toHaveBeenCalledWith('Kyiv');
+      expect(mockWeatherProvider.getWeatherByCity).toHaveBeenCalledWith('Kyiv');
+      expect(mockCacheProvider.get).toHaveBeenCalledWith('weather:Kyiv');
+      expect(mockCacheProvider.set).toHaveBeenCalledWith(
+        'weather:Kyiv',
+        {
+          city: 'Kyiv',
+          temperature: {
+            c: 25,
+            f: 77,
+          },
+          humidity: 65,
+          shortDescription: 'Sunny',
+        },
+        300,
+      );
     });
 
     it('should return 400 Bad Request when city parameter is missing', async () => {
@@ -100,7 +118,7 @@ describe('Weather Integration Tests', () => {
 
     it('should return 404 Not Found when city is not found', async () => {
       // Arrange
-      mockWeatherApiService.getWeatherByCity = jest.fn().mockRejectedValue(new CityNotFoundError());
+      mockWeatherProvider.getWeatherByCity.mockRejectedValue(new WeatherApiCityNotFoundError());
 
       // Act
       const response = await request(app).get('/api/weather').query({ city: 'NonexistentCity' });
@@ -112,7 +130,7 @@ describe('Weather Integration Tests', () => {
 
     it('should return 500 Internal Server Error for unexpected errors', async () => {
       // Arrange
-      mockWeatherApiService.getWeatherByCity = jest.fn().mockRejectedValue(new Error('Unexpected error'));
+      mockWeatherProvider.getWeatherByCity.mockRejectedValue(new Error('Unexpected error'));
 
       // Act
       const response = await request(app).get('/api/weather').query({ city: 'Kyiv' });
