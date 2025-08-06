@@ -1,4 +1,7 @@
-import SubscriptionRepository from '@/modules/subscription/repository/subscription';
+import 'reflect-metadata';
+
+import { Subscription } from '@/modules/subscription/domain/entities/subscription';
+import SubscriptionRepository from '@/modules/subscription/infrastructure/repository/SubscriptionRepository';
 import { PrismaClient, SubscriptionFrequency } from '@prisma/client';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 
@@ -26,8 +29,8 @@ describe('SubscriptionRepository', () => {
     await prisma.city.deleteMany();
   });
 
-  describe('create', () => {
-    it('should create a subscription with a new city', async () => {
+  describe('save', () => {
+    it('should save a subscription with a new city', async () => {
       // Arrange
       const subscriptionData = {
         email: 'test@example.com',
@@ -47,7 +50,8 @@ describe('SubscriptionRepository', () => {
       };
 
       // Act
-      const result = await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      const result = await repository.save(subscription);
 
       // Assert
       expect(result).toBeDefined();
@@ -94,7 +98,8 @@ describe('SubscriptionRepository', () => {
       };
 
       // Act
-      const result = await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      const result = await repository.save(subscription);
 
       // Assert
       expect(result).toBeDefined();
@@ -123,7 +128,8 @@ describe('SubscriptionRepository', () => {
         },
       };
 
-      await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      await repository.save(subscription);
 
       // Act
       const result = await repository.findByEmail('test@example.com');
@@ -164,7 +170,8 @@ describe('SubscriptionRepository', () => {
         },
       };
 
-      await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      await repository.save(subscription);
 
       // Act
       const result = await repository.findByConfirmationToken('confirm-123');
@@ -195,7 +202,8 @@ describe('SubscriptionRepository', () => {
         },
       };
 
-      await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      await repository.save(subscription);
 
       // Act
       const result = await repository.findByRevokeToken('revoke-123');
@@ -206,8 +214,8 @@ describe('SubscriptionRepository', () => {
     });
   });
 
-  describe('updateByConfirmationToken', () => {
-    it('should update a subscription by confirmation token', async () => {
+  describe('save (update)', () => {
+    it('should update an existing subscription', async () => {
       // Arrange
       const subscriptionData = {
         email: 'test@example.com',
@@ -226,13 +234,13 @@ describe('SubscriptionRepository', () => {
         },
       };
 
-      await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      const savedSubscription = await repository.save(subscription);
 
       // Act
-      const result = await repository.updateByConfirmationToken('confirm-123', {
-        isConfirmed: true,
-        confirmationToken: null,
-      });
+      savedSubscription.isConfirmed = true;
+      savedSubscription.confirmationToken = null;
+      const result = await repository.save(savedSubscription);
 
       // Assert
       expect(result).toBeDefined();
@@ -261,7 +269,8 @@ describe('SubscriptionRepository', () => {
         },
       };
 
-      await repository.create(subscriptionData);
+      const subscription = new Subscription(subscriptionData);
+      await repository.save(subscription);
 
       // Act
       const result = await repository.deleteByRevokeToken('revoke-123');
@@ -269,7 +278,7 @@ describe('SubscriptionRepository', () => {
 
       // Assert
       expect(result).toBeDefined();
-      expect(result.email).toBe('test@example.com');
+      expect(result!.email).toBe('test@example.com');
       expect(findResult).toBeNull(); // Subscription should be deleted
     });
   });

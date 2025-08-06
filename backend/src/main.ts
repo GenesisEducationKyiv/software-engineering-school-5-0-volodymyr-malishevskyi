@@ -1,17 +1,17 @@
 import 'module-alias/register';
 import 'reflect-metadata';
 
-import logger from '@/common/services/logger';
-import config from '@/config';
+import logger from '@/common/logging/logger';
+import { type Config } from '@/config';
 import prisma from '@/lib/prisma';
 import nodeCron from 'node-cron';
 
-import { WeatherBroadcastService } from '@/common/services/weather-broadcast';
+import { IBroadcastService } from '@/common/interfaces/broadcast-service';
 import { createApp } from './app';
-import { container, initializeDI } from './container';
+import { container } from './container';
 
-// Initialize DI container with configuration
-initializeDI(config);
+// Get config from container
+const config = container.resolve<Config>('Config');
 
 // Create express app
 const app = createApp(container);
@@ -36,8 +36,8 @@ config.broadcastCrons.forEach(([type, cron]: ['daily' | 'hourly', string]) => {
     cronExpression: cron,
   });
   nodeCron.schedule(cron, async () => {
-    const weatherBroadcastService = container.resolve<WeatherBroadcastService>('WeatherBroadcastService');
-    weatherBroadcastService.broadcast(type).catch((error: Error) => {
+    const broadcastService = container.resolve<IBroadcastService>('BroadcastService');
+    broadcastService.broadcastWeatherUpdates(type).catch((error: Error) => {
       logger.error(`Error broadcasting ${type} weather`, {
         type: 'broadcast',
         cronType: type,

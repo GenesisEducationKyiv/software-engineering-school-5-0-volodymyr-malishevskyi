@@ -1,13 +1,13 @@
 import cors from 'cors';
 import express from 'express';
 import { MetricsService } from './common/metrics/metrics.service';
-import errorHandleMiddleware from './common/middlewares/error-handle';
+import errorHandleMiddleware from './common/middlewares/error-handler';
 import requestLoggingMiddleware from './common/middlewares/request-logging';
 import { DependencyContainer } from './container';
 import { subscriptionRouterFactory } from './modules/subscription';
-import { SubscriptionController } from './modules/subscription/subscription.controller';
+import { SubscriptionController } from './modules/subscription/presentation/subscription.controller';
 import { weatherRouterFactory } from './modules/weather';
-import { WeatherController } from './modules/weather/weather.controller';
+import { WeatherController } from './modules/weather/presentation/weather.controller';
 
 export function createApp(container: DependencyContainer) {
   const app = express();

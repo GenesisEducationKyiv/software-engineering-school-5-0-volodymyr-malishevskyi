@@ -17,7 +17,11 @@
     "test:integration": "jest --testMatch='**/*.integration.spec.ts'",
     "test:e2e": "jest --testMatch='**/*.e2e.spec.ts'",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "arch:validate": "depcruise src --config .dependency-cruiser.js",
+    "arch:graph": "depcruise src --config .dependency-cruiser.js --output-type dot | dot -T svg > architecture-graph.svg",
+    "arch:graph:png": "depcruise src --config .dependency-cruiser.js --output-type dot | dot -T png > architecture-graph.png",
+    "arch:baseline": "depcruise src --config .dependency-cruiser.js --output-type baseline > .dependency-cruiser-baseline.json"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",
@@ -50,6 +54,7 @@
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
+    "dependency-cruiser": "^17.0.0",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.0",

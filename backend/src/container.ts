@@ -4,95 +4,96 @@ import { InMemoryCacheProvider } from '@/common/cache/providers/in-memory-cache-
 import { MemcachedCacheProvider } from '@/common/cache/providers/memcached-cache-provider';
 import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
 import { FetchHttpClient } from '@/common/http-client';
-import { GmailEmailingService } from '@/common/services/gmail-emailing';
-import logger from '@/common/services/logger';
-import { WeatherBroadcastService } from '@/common/services/weather-broadcast';
-import { Config } from '@/config';
+import logger from '@/common/logging/logger';
+import { BroadcastService } from '@/common/services/broadcast.service';
+import { EmailTemplateService } from '@/common/services/email-template.service';
+import { GmailEmailingService } from '@/common/services/gmail-emailing.service';
+import { NotificationService } from '@/common/services/notification.service';
+import { ConfigFactory, type Config } from '@/config';
 import { PrismaClientInstance } from '@/lib/prisma';
-import SubscriptionRepository from '@/modules/subscription/repository/subscription';
-import { SubscriptionController } from '@/modules/subscription/subscription.controller';
-import { SubscriptionService } from '@/modules/subscription/subscription.service';
-import { CachedWeatherProvider } from '@/modules/weather/weather-providers/cached-weather-provider';
-import { WeatherProviderChainFactory } from '@/modules/weather/weather-providers/chain/weather-provider-chain-factory';
-import { OpenWeatherMapProvider } from '@/modules/weather/weather-providers/openweather/openweather';
-import { WeatherApiProvider } from '@/modules/weather/weather-providers/weather-api/weather-api';
-import { WeatherController } from '@/modules/weather/weather.controller';
-import { WeatherService } from '@/modules/weather/weather.service';
+import { SubscriptionService } from '@/modules/subscription/application/services/subscription.service';
+import SubscriptionRepository from '@/modules/subscription/infrastructure/repository/SubscriptionRepository';
+import { SubscriptionController } from '@/modules/subscription/presentation/subscription.controller';
+import { WeatherService } from '@/modules/weather/application/services/weather.service';
+import { CachedWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/cached-weather-provider';
+import { WeatherProviderChainFactory } from '@/modules/weather/infrastructure/weather-providers/chain/weather-provider-chain-factory';
+import { OpenWeatherMapProvider } from '@/modules/weather/infrastructure/weather-providers/openweather/openweather';
+import { WeatherApiProvider } from '@/modules/weather/infrastructure/weather-providers/weather-api/weather-api';
+import { WeatherController } from '@/modules/weather/presentation/weather.controller';
 import { Registry } from 'prom-client';
 import 'reflect-metadata';
 import { container, DependencyContainer } from 'tsyringe';
 import { MetricsService } from './common/metrics/metrics.service';
 
-/**
- * Initialize DI container with all dependencies
- * @param config - Configuration object to register in container
- */
-export function initializeDI(config: Config): void {
-  // Infrastructure services
-  container.registerInstance('Config', config);
-  container.registerSingleton('PrismaClient', PrismaClientInstance);
-  container.registerInstance('Logger', logger);
-  container.registerSingleton('HttpClient', FetchHttpClient);
-  container.registerSingleton('PromClientRegistry', Registry);
-  container.registerSingleton('MetricsService', MetricsService);
+// Create config instance from environment variables
+const config = ConfigFactory.createFromEnv();
 
-  // Cache providers
-  container.registerSingleton('InMemoryCacheProvider', InMemoryCacheProvider);
-  container.registerSingleton('RedisCacheProvider', RedisCacheProvider);
-  container.registerSingleton('MemcachedCacheProvider', MemcachedCacheProvider);
-  container.registerSingleton('InstrumentedCacheProvider', InstrumentedCacheProvider);
+// Infrastructure services
+container.registerInstance('Config', config);
+container.registerSingleton('PrismaClient', PrismaClientInstance);
+container.registerInstance('Logger', logger);
+container.registerSingleton('HttpClient', FetchHttpClient);
+container.registerSingleton('PromClientRegistry', Registry);
+container.registerSingleton('MetricsService', MetricsService);
 
-  // Main cache provider (resolved by factory)
-  container.register('CacheProvider', {
-    useFactory: () => {
-      const metricsService = container.resolve<MetricsService>('MetricsService');
-      return CacheProviderFactory.create(metricsService, 'weather-service');
-    },
-  });
+// Cache providers
+container.registerSingleton('InMemoryCacheProvider', InMemoryCacheProvider);
+container.registerSingleton('RedisCacheProvider', RedisCacheProvider);
+container.registerSingleton('MemcachedCacheProvider', MemcachedCacheProvider);
+container.registerSingleton('InstrumentedCacheProvider', InstrumentedCacheProvider);
 
-  // Weather providers
-  container.registerSingleton('WeatherApiService', WeatherApiProvider);
-  container.registerSingleton('OpenWeatherService', OpenWeatherMapProvider);
+// Main cache provider (resolved by factory)
+container.register('CacheProvider', {
+  useFactory: () => {
+    const metricsService = container.resolve<MetricsService>('MetricsService');
+    return CacheProviderFactory.create(metricsService, 'weather-service');
+  },
+});
 
-  // Main weather provider (chain with failover)
-  container.register('WeatherProvider', {
-    useFactory: () => {
-      const httpClient = container.resolve<FetchHttpClient>('HttpClient');
-      const config = container.resolve<Config>('Config');
+// Weather providers
+container.registerSingleton('WeatherApiService', WeatherApiProvider);
+container.registerSingleton('OpenWeatherService', OpenWeatherMapProvider);
 
-      const weatherProvidersConfig = {
-        weatherApi: config.weather.providers.weatherApi.apiKey
-          ? {
-              apiKey: config.weather.providers.weatherApi.apiKey,
-              priority: config.weather.providers.weatherApi.priority,
-            }
-          : undefined,
-        openWeather: config.weather.providers.openWeather.apiKey
-          ? {
-              apiKey: config.weather.providers.openWeather.apiKey,
-              priority: config.weather.providers.openWeather.priority,
-            }
-          : undefined,
-      };
+// Main weather provider (chain with failover)
+container.register('WeatherProvider', {
+  useFactory: () => {
+    const httpClient = container.resolve<FetchHttpClient>('HttpClient');
+    const config = container.resolve<Config>('Config');
 
-      return WeatherProviderChainFactory.createChain(httpClient, weatherProvidersConfig);
-    },
-  });
+    const weatherProvidersConfig = {
+      weatherApi: config.weather.providers.weatherApi.apiKey
+        ? {
+            apiKey: config.weather.providers.weatherApi.apiKey,
+            priority: config.weather.providers.weatherApi.priority,
+          }
+        : undefined,
+      openWeather: config.weather.providers.openWeather.apiKey
+        ? {
+            apiKey: config.weather.providers.openWeather.apiKey,
+            priority: config.weather.providers.openWeather.priority,
+          }
+        : undefined,
+    };
 
-  // Business services
-  container.registerSingleton('EmailingService', GmailEmailingService);
-  container.registerSingleton('WeatherBroadcastService', WeatherBroadcastService);
+    return WeatherProviderChainFactory.createChain(httpClient, weatherProvidersConfig);
+  },
+});
 
-  // Weather module
-  container.registerSingleton('WeatherService', WeatherService);
-  container.registerSingleton('CachedWeatherProvider', CachedWeatherProvider);
-  container.registerSingleton('WeatherController', WeatherController);
+// Business services
+container.registerSingleton('EmailingService', GmailEmailingService);
+container.registerSingleton('EmailTemplateService', EmailTemplateService);
+container.registerSingleton('NotificationService', NotificationService);
+container.registerSingleton('BroadcastService', BroadcastService);
 
-  // Subscription module
-  container.registerSingleton('SubscriptionRepository', SubscriptionRepository);
-  container.registerSingleton('SubscriptionService', SubscriptionService);
-  container.registerSingleton('SubscriptionController', SubscriptionController);
-}
+// Weather module
+container.registerSingleton('WeatherService', WeatherService);
+container.registerSingleton('CachedWeatherProvider', CachedWeatherProvider);
+container.registerSingleton('WeatherController', WeatherController);
+
+// Subscription module
+container.registerSingleton('SubscriptionRepository', SubscriptionRepository);
+container.registerSingleton('SubscriptionService', SubscriptionService);
+container.registerSingleton('SubscriptionController', SubscriptionController);
 
 /**
  * Export container for direct access
