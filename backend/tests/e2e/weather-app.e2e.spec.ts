@@ -86,13 +86,9 @@ describe('App E2E Tests', () => {
     ]);
 
     mockWeatherProvider.getWeatherByCity = jest.fn().mockResolvedValue({
-      city: 'Kyiv',
-      temperature: {
-        c: 25,
-        f: 77,
-      },
+      temperature: 25,
       humidity: 65,
-      shortDescription: 'Sunny',
+      description: 'Sunny',
     });
 
     mockEmailingService.sendEmail = jest.fn().mockResolvedValue(undefined);
