@@ -1,31 +1,33 @@
-import { INotificationService } from '@/common/interfaces/notification-service';
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
+import {
+  IEventBus,
+  SubscriptionCancelledEvent,
+  SubscriptionConfirmedEvent,
+  SubscriptionCreatedEvent,
+} from '@/common/events';
 import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
+import { IWeatherProvider } from '@/modules/subscription/application/interfaces/weather-provider';
 import { inject, injectable } from 'tsyringe';
 import { Subscription } from '../../domain/entities/subscription';
 import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';
 import { ISubscriptionRepository } from '../../domain/interfaces/subscription.repository';
-import {
-  NotificationFailedError,
-  TokenNotFoundError,
-  WeatherServiceUnavailableError,
-} from '../errors/subscription.service';
+import { TokenNotFoundError, WeatherServiceUnavailableError } from '../errors/subscription.service';
 
 /**
  * Subscription Service
  *
  * Manages weather subscriptions including creation, confirmation, and cancellation.
- * Uses dependency injection for weather provider, email service, and configuration.
+ * Uses dependency injection for weather provider, event bus, and configuration.
+ * Emits events for subscription lifecycle changes that are consumed by notification module.
  */
 @injectable()
 export class SubscriptionService {
   constructor(
     @inject('SubscriptionRepository')
     private subscriptionRepository: ISubscriptionRepository,
-    @inject('CachedWeatherProvider')
+    @inject('WeatherProvider')
     private weatherProvider: IWeatherProvider,
-    @inject('NotificationService')
-    private notificationService: INotificationService,
+    @inject('EventBus')
+    private eventBus: IEventBus,
     @inject('Config')
     private readonly config: { appUrl: string },
   ) {}
@@ -44,20 +46,18 @@ export class SubscriptionService {
       throw new EmailAlreadyExistsError(email);
     }
 
-    let mostRelevantCity;
+    let cities;
     try {
-      const cities = await this.weatherProvider.searchCity(city);
-      mostRelevantCity = cities[0];
-
-      if (!mostRelevantCity) {
-        throw new WeatherServiceUnavailableError(city);
-      }
+      cities = await this.weatherProvider.searchCity(city);
     } catch (error) {
-      if (error instanceof WeatherServiceUnavailableError) {
-        throw error;
-      }
       throw new WeatherServiceUnavailableError(city, error as Error);
     }
+
+    if (!cities || cities.length === 0) {
+      throw new WeatherServiceUnavailableError(city, new Error('No cities found'));
+    }
+
+    const mostRelevantCity = cities[0];
 
     const confirmationToken = generateConfirmationToken();
     const revokeToken = generateRevokeToken();
@@ -80,16 +80,15 @@ export class SubscriptionService {
       }),
     );
 
-    try {
-      await this.notificationService.sendSubscriptionConfirmation({
-        email,
-        confirmationUrl: `${this.config.appUrl}/api/confirm/${confirmationToken}`,
-        cityFullName: subscription.city.fullName,
-        frequency: subscription.frequency.toLowerCase(),
-      });
-    } catch (error) {
-      throw new NotificationFailedError(email, 'confirmation', error as Error);
-    }
+    const event = new SubscriptionCreatedEvent(
+      subscription.id?.toString() || 'unknown',
+      email,
+      subscription.city.fullName,
+      subscription.frequency.toLowerCase(),
+      `${this.config.appUrl}/api/confirm/${confirmationToken}`,
+    );
+
+    await this.eventBus.publish(event);
   }
 
   /**
@@ -109,12 +108,15 @@ export class SubscriptionService {
 
     await this.subscriptionRepository.save(subscription);
 
-    await this.notificationService.sendSubscriptionConfirmed({
-      email: subscription.email,
-      cityFullName: subscription.city.fullName,
-      frequency: subscription.frequency.toLowerCase(),
-      unsubscribeUrl: `${this.config.appUrl}/api/unsubscribe/${subscription.revokeToken}`,
-    });
+    const event = new SubscriptionConfirmedEvent(
+      subscription.id?.toString() || 'unknown',
+      subscription.email,
+      subscription.city.fullName,
+      subscription.frequency.toLowerCase(),
+      `${this.config.appUrl}/api/unsubscribe/${subscription.revokeToken}`,
+    );
+
+    await this.eventBus.publish(event);
   }
 
   /**
@@ -131,10 +133,13 @@ export class SubscriptionService {
 
     await this.subscriptionRepository.deleteByRevokeToken(token);
 
-    await this.notificationService.sendSubscriptionCancellation({
-      email: subscription.email,
-      cityFullName: subscription.city.fullName,
-      frequency: subscription.frequency.toLowerCase(),
-    });
+    const event = new SubscriptionCancelledEvent(
+      subscription.id?.toString() || 'unknown',
+      subscription.email,
+      subscription.city.fullName,
+      subscription.frequency.toLowerCase(),
+    );
+
+    await this.eventBus.publish(event);
   }
 }
