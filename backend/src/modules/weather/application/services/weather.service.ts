@@ -1,4 +1,4 @@
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
+import { IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
 import { inject, injectable } from 'tsyringe';
 import { IWeatherResponse, IWeatherService } from '../types/weather.service';
 
@@ -11,7 +11,7 @@ import { IWeatherResponse, IWeatherService } from '../types/weather.service';
 @injectable()
 export class WeatherService implements IWeatherService {
   constructor(
-    @inject('CachedWeatherProvider')
+    @inject('WeatherProvider')
     private readonly weatherProvider: IWeatherProvider,
   ) {}
 
@@ -25,9 +25,9 @@ export class WeatherService implements IWeatherService {
     const weather = await this.weatherProvider.getWeatherByCity(city);
 
     return {
-      temperature: weather.temperature.c,
+      temperature: weather.temperature,
       humidity: weather.humidity,
-      description: weather.shortDescription,
+      description: weather.description,
     };
   }
 }
