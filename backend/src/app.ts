@@ -6,8 +6,8 @@ import requestLoggingMiddleware from './common/middlewares/request-logging';
 import { DependencyContainer } from './container';
 import { subscriptionRouterFactory } from './modules/subscription';
 import { SubscriptionController } from './modules/subscription/presentation/subscription.controller';
-import { weatherRouterFactory } from './modules/weather';
 import { WeatherController } from './modules/weather/presentation/weather.controller';
+import weatherRouterFactory from './modules/weather/presentation/weather.router';
 
 export function createApp(container: DependencyContainer) {
   const app = express();
@@ -17,13 +17,13 @@ export function createApp(container: DependencyContainer) {
   app.use(cors());
   app.use(requestLoggingMiddleware);
 
-  // Weather Module
-  const weatherController = container.resolve('WeatherController') as WeatherController;
-  app.use('/api', weatherRouterFactory(weatherController));
-
   // Subscription Module
   const subscriptionController = container.resolve('SubscriptionController') as SubscriptionController;
   app.use('/api', subscriptionRouterFactory(subscriptionController));
+
+  // Weather Module
+  const weatherController = container.resolve('WeatherController') as WeatherController;
+  app.use('/api', weatherRouterFactory(weatherController));
 
   // Metrics Module
   const metricsService = container.resolve('MetricsService') as MetricsService;
