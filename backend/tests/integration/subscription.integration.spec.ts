@@ -3,7 +3,6 @@ import 'reflect-metadata';
 import { createApp } from '@/app';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
-import { Weather } from '@/modules/weather/infrastructure/weather-providers/types/weather-provider';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -72,14 +71,10 @@ describe('Subscription Integration Tests', () => {
     ]);
 
     mockWeatherProvider.getWeatherByCity = jest.fn().mockResolvedValue({
-      city: 'Kyiv',
-      temperature: {
-        c: 25,
-        f: 77,
-      },
+      temperature: 25,
       humidity: 65,
-      shortDescription: 'Sunny',
-    } as Weather);
+      description: 'Sunny',
+    });
 
     mockEmailingService.sendEmail = jest.fn().mockResolvedValue(undefined);
   });

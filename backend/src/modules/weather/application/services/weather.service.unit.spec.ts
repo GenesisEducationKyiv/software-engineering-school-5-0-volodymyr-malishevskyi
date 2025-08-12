@@ -1,4 +1,4 @@
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
+import { IWeatherProvider } from '@/modules/weather/infrastructure/types/weather.client';
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 import { WeatherService } from './weather.service';
@@ -14,7 +14,7 @@ describe('WeatherService', () => {
 
   beforeEach(() => {
     testContainer = container.createChildContainer();
-    testContainer.registerInstance('CachedWeatherProvider', mockWeatherProvider);
+    testContainer.registerInstance('WeatherProvider', mockWeatherProvider);
     weatherService = testContainer.resolve(WeatherService);
     mockWeatherProvider.getWeatherByCity.mockClear();
   });
@@ -26,10 +26,9 @@ describe('WeatherService', () => {
   describe('getWeatherByCity', () => {
     it('should return weather data for a valid city', async () => {
       const mockWeatherData = {
-        city: 'Kyiv',
-        temperature: { c: 20, f: 68 },
+        temperature: 20,
         humidity: 65,
-        shortDescription: 'Partly cloudy',
+        description: 'Partly cloudy',
       };
 
       mockWeatherProvider.getWeatherByCity.mockResolvedValue(mockWeatherData);

@@ -11,6 +11,11 @@ export const configSchema = z.object({
   port: z.number().min(1, 'PORT must be a positive integer').max(65535, 'PORT must be a valid port number'),
   appUrl: z.string().url('APP_URL must be a valid URL'),
   broadcastCrons: z.array(z.tuple([z.enum(['daily', 'hourly']), z.string()])),
+  communicationProtocol: z.enum(['http', 'grpc']),
+  weatherService: z.object({
+    httpUrl: z.string().url('WEATHER_SERVICE_URL must be a valid URL'),
+    grpcUrl: z.string().min(1, 'WEATHER_SERVICE_GRPC_URL is required'),
+  }),
   smtp: z.object({
     user: z.string().min(1, 'SMTP_USER is required'),
     password: z.string().min(1, 'SMTP_PASSWORD is required'),
@@ -68,6 +73,11 @@ export class ConfigFactory {
         ['daily', '0 0 * * *'],
         ['hourly', '0 * * * *'],
       ]),
+      communicationProtocol: (process.env.COMMUNICATION_PROTOCOL || 'grpc') as 'http' | 'grpc',
+      weatherService: {
+        httpUrl: process.env.WEATHER_SERVICE_URL || 'http://localhost:3031',
+        grpcUrl: process.env.WEATHER_SERVICE_GRPC_URL || 'localhost:50051',
+      },
       smtp: {
         user: process.env.SMTP_USER || '',
         password: process.env.SMTP_PASSWORD || '',
@@ -118,6 +128,11 @@ export class ConfigFactory {
       port: 3000,
       appUrl: 'http://localhost:3000',
       broadcastCrons: [['daily', '0 0 * * *']],
+      communicationProtocol: 'http',
+      weatherService: {
+        httpUrl: 'http://localhost:3001',
+        grpcUrl: 'localhost:50051',
+      },
       smtp: {
         user: 'test@example.com',
         password: 'password',

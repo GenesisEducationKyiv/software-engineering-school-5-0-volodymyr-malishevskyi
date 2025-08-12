@@ -5,11 +5,16 @@ services:
       dockerfile: Dockerfile
     ports:
       - 3000:3000
+    env_file:
+      - path: .env
+        required: false
     environment:
       PORT: 3000
       APP_URL: http://localhost:9000
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public
-      WEATHER_API_KEY: ${WEATHER_API_KEY}
+      WEATHER_SERVICE_URL: http://weather-service:3000
+      WEATHER_SERVICE_GRPC_URL: weather-service:50051
+      COMMUNICATION_PROTOCOL: grpc
 
       SMTP_FROM: ${SMTP_FROM}
       SMTP_USER: ${SMTP_USER}
@@ -17,6 +22,34 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      weather-service:
+        condition: service_started
+  weather-service:
+    build:
+      context: ./weather
+      dockerfile: Dockerfile
+    ports:
+      - 3001:3000
+      - 50051:50051
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: 3000
+      GRPC_PORT: 50051
+
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
+      CACHE_TYPE: redis
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   frontend:
     build:

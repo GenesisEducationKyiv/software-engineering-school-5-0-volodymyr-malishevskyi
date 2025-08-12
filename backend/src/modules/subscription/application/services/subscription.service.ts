@@ -1,6 +1,6 @@
-import { INotificationService } from '@/common/interfaces/notification-service';
-import { IWeatherProvider } from '@/common/interfaces/weather-provider';
 import { generateConfirmationToken, generateRevokeToken } from '@/common/utils/token-generator';
+import { INotificationService } from '@/modules/notification';
+import { IWeatherProvider } from '@/modules/subscription/application/interfaces/weather-provider';
 import { inject, injectable } from 'tsyringe';
 import { Subscription } from '../../domain/entities/subscription';
 import { EmailAlreadyExistsError } from '../../domain/errors/subscription-domain-errors';
@@ -22,7 +22,7 @@ export class SubscriptionService {
   constructor(
     @inject('SubscriptionRepository')
     private subscriptionRepository: ISubscriptionRepository,
-    @inject('CachedWeatherProvider')
+    @inject('WeatherProvider')
     private weatherProvider: IWeatherProvider,
     @inject('NotificationService')
     private notificationService: INotificationService,
@@ -44,20 +44,18 @@ export class SubscriptionService {
       throw new EmailAlreadyExistsError(email);
     }
 
-    let mostRelevantCity;
+    let cities;
     try {
-      const cities = await this.weatherProvider.searchCity(city);
-      mostRelevantCity = cities[0];
-
-      if (!mostRelevantCity) {
-        throw new WeatherServiceUnavailableError(city);
-      }
+      cities = await this.weatherProvider.searchCity(city);
     } catch (error) {
-      if (error instanceof WeatherServiceUnavailableError) {
-        throw error;
-      }
       throw new WeatherServiceUnavailableError(city, error as Error);
     }
+
+    if (!cities || cities.length === 0) {
+      throw new WeatherServiceUnavailableError(city, new Error('No cities found'));
+    }
+
+    const mostRelevantCity = cities[0];
 
     const confirmationToken = generateConfirmationToken();
     const revokeToken = generateRevokeToken();

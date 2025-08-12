@@ -1,29 +1,20 @@
-import { CacheProviderFactory } from '@/common/cache/cache-provider-factory';
-import { InstrumentedCacheProvider } from '@/common/cache/instrumented-cache-provider';
-import { InMemoryCacheProvider } from '@/common/cache/providers/in-memory-cache-provider';
-import { MemcachedCacheProvider } from '@/common/cache/providers/memcached-cache-provider';
-import { RedisCacheProvider } from '@/common/cache/providers/redis-cache-provider';
 import { FetchHttpClient } from '@/common/http-client';
 import logger from '@/common/logging/logger';
 import { BroadcastService } from '@/common/services/broadcast.service';
-import { EmailTemplateService } from '@/common/services/email-template.service';
-import { GmailEmailingService } from '@/common/services/gmail-emailing.service';
-import { NotificationService } from '@/common/services/notification.service';
-import { ConfigFactory, type Config } from '@/config';
+import { ConfigFactory } from '@/config';
 import { PrismaClientInstance } from '@/lib/prisma';
+import { EmailTemplateService, GmailEmailingService, NotificationService } from '@/modules/notification';
 import { SubscriptionService } from '@/modules/subscription/application/services/subscription.service';
 import SubscriptionRepository from '@/modules/subscription/infrastructure/repository/SubscriptionRepository';
 import { SubscriptionController } from '@/modules/subscription/presentation/subscription.controller';
-import { WeatherService } from '@/modules/weather/application/services/weather.service';
-import { CachedWeatherProvider } from '@/modules/weather/infrastructure/weather-providers/cached-weather-provider';
-import { WeatherProviderChainFactory } from '@/modules/weather/infrastructure/weather-providers/chain/weather-provider-chain-factory';
-import { OpenWeatherMapProvider } from '@/modules/weather/infrastructure/weather-providers/openweather/openweather';
-import { WeatherApiProvider } from '@/modules/weather/infrastructure/weather-providers/weather-api/weather-api';
-import { WeatherController } from '@/modules/weather/presentation/weather.controller';
+import { WeatherServiceHttpClient } from '@/modules/weather/infrastructure/weather-http-client';
 import { Registry } from 'prom-client';
 import 'reflect-metadata';
 import { container, DependencyContainer } from 'tsyringe';
 import { MetricsService } from './common/metrics/metrics.service';
+import { WeatherService } from './modules/weather/application/services/weather.service';
+import { WeatherServiceGrpcClient } from './modules/weather/infrastructure/weather-grpc-client';
+import { WeatherController } from './modules/weather/presentation/weather.controller';
 
 // Create config instance from environment variables
 const config = ConfigFactory.createFromEnv();
@@ -36,46 +27,28 @@ container.registerSingleton('HttpClient', FetchHttpClient);
 container.registerSingleton('PromClientRegistry', Registry);
 container.registerSingleton('MetricsService', MetricsService);
 
-// Cache providers
-container.registerSingleton('InMemoryCacheProvider', InMemoryCacheProvider);
-container.registerSingleton('RedisCacheProvider', RedisCacheProvider);
-container.registerSingleton('MemcachedCacheProvider', MemcachedCacheProvider);
-container.registerSingleton('InstrumentedCacheProvider', InstrumentedCacheProvider);
-
-// Main cache provider (resolved by factory)
-container.register('CacheProvider', {
-  useFactory: () => {
-    const metricsService = container.resolve<MetricsService>('MetricsService');
-    return CacheProviderFactory.create(metricsService, 'weather-service');
-  },
+// Weather service configuration
+container.registerInstance('WeatherServiceHttpClientConfig', {
+  baseUrl: config.weatherService.httpUrl,
 });
 
-// Weather providers
-container.registerSingleton('WeatherApiService', WeatherApiProvider);
-container.registerSingleton('OpenWeatherService', OpenWeatherMapProvider);
+container.registerInstance('WeatherServiceGrpcClientConfig', {
+  serverAddress: config.weatherService.grpcUrl,
+  timeout: 10000,
+});
 
-// Main weather provider (chain with failover)
+// Weather clients
+container.registerSingleton('WeatherServiceHttpClient', WeatherServiceHttpClient);
+container.registerSingleton('WeatherServiceGrpcClient', WeatherServiceGrpcClient);
+
+// Main weather provider (switch between HTTP and gRPC based on config)
 container.register('WeatherProvider', {
   useFactory: () => {
-    const httpClient = container.resolve<FetchHttpClient>('HttpClient');
-    const config = container.resolve<Config>('Config');
-
-    const weatherProvidersConfig = {
-      weatherApi: config.weather.providers.weatherApi.apiKey
-        ? {
-            apiKey: config.weather.providers.weatherApi.apiKey,
-            priority: config.weather.providers.weatherApi.priority,
-          }
-        : undefined,
-      openWeather: config.weather.providers.openWeather.apiKey
-        ? {
-            apiKey: config.weather.providers.openWeather.apiKey,
-            priority: config.weather.providers.openWeather.priority,
-          }
-        : undefined,
-    };
-
-    return WeatherProviderChainFactory.createChain(httpClient, weatherProvidersConfig);
+    if (config.communicationProtocol === 'grpc') {
+      return container.resolve<WeatherServiceGrpcClient>('WeatherServiceGrpcClient');
+    } else {
+      return container.resolve<WeatherServiceHttpClient>('WeatherServiceHttpClient');
+    }
   },
 });
 
@@ -85,10 +58,9 @@ container.registerSingleton('EmailTemplateService', EmailTemplateService);
 container.registerSingleton('NotificationService', NotificationService);
 container.registerSingleton('BroadcastService', BroadcastService);
 
-// Weather module
-container.registerSingleton('WeatherService', WeatherService);
-container.registerSingleton('CachedWeatherProvider', CachedWeatherProvider);
+// Weather module is now handled by weather-service via HTTP client
 container.registerSingleton('WeatherController', WeatherController);
+container.registerSingleton('WeatherService', WeatherService);
 
 // Subscription module
 container.registerSingleton('SubscriptionRepository', SubscriptionRepository);
