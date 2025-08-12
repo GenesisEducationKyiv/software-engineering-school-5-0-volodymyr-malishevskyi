@@ -53,6 +53,38 @@ export const configSchema = z.object({
         message: 'Redis URL or Memcached location is required for the selected cache provider',
       },
     ),
+  eventBus: z
+    .object({
+      provider: z.enum(['in-memory', 'redpanda']),
+      redpanda: z
+        .object({
+          brokers: z.array(z.string().min(1)).min(1),
+          clientId: z.string().min(1),
+          groupId: z.string().min(1),
+          topic: z.string().min(1).default('weather-events'),
+          connectionTimeout: z.number().positive().optional(),
+          requestTimeout: z.number().positive().optional(),
+          retry: z
+            .object({
+              retries: z.number().min(0),
+              initialRetryTime: z.number().positive(),
+              maxRetryTime: z.number().positive(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.provider === 'redpanda') {
+          return !!data.redpanda;
+        }
+        return true;
+      },
+      {
+        message: 'Redpanda configuration is required when using Redpanda provider',
+      },
+    ),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -99,6 +131,29 @@ export class ConfigFactory {
         provider: (process.env.CACHE_PROVIDER || 'in-memory') as 'redis' | 'memcached' | 'in-memory',
         redisUrl: process.env.REDIS_URL,
         memcachedLocation: process.env.MEMCACHED_LOCATION,
+      },
+      eventBus: {
+        provider: (process.env.EVENT_BUS_PROVIDER || 'in-memory') as 'in-memory' | 'redpanda',
+        redpanda:
+          process.env.EVENT_BUS_PROVIDER === 'redpanda'
+            ? {
+                brokers: safeJsonParse(process.env.REDPANDA_BROKERS, ['localhost:9092']),
+                clientId: process.env.REDPANDA_CLIENT_ID || 'weather-backend',
+                groupId: process.env.REDPANDA_GROUP_ID || 'weather-backend-group',
+                topic: process.env.REDPANDA_TOPIC || 'weather-events',
+                connectionTimeout: process.env.REDPANDA_CONNECTION_TIMEOUT
+                  ? parseInt(process.env.REDPANDA_CONNECTION_TIMEOUT, 10)
+                  : undefined,
+                requestTimeout: process.env.REDPANDA_REQUEST_TIMEOUT
+                  ? parseInt(process.env.REDPANDA_REQUEST_TIMEOUT, 10)
+                  : undefined,
+                retry: {
+                  retries: parseInt(process.env.REDPANDA_RETRY_RETRIES || '5', 10),
+                  initialRetryTime: parseInt(process.env.REDPANDA_RETRY_INITIAL_TIME || '100', 10),
+                  maxRetryTime: parseInt(process.env.REDPANDA_RETRY_MAX_TIME || '30000', 10),
+                },
+              }
+            : undefined,
       },
     };
 
@@ -151,6 +206,9 @@ export class ConfigFactory {
         },
       },
       cache: {
+        provider: 'in-memory',
+      },
+      eventBus: {
         provider: 'in-memory',
       },
     };

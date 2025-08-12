@@ -1,13 +1,23 @@
 import 'reflect-metadata';
 
 import { createApp } from '@/app';
+import { SubscriptionCreatedEvent, SubscriptionConfirmedEvent, SubscriptionCancelledEvent } from '@/common/events';
+import { EventBusFactory } from '@/common/events/event-bus-factory';
+import { IEventBus } from '@/common/events/interfaces/event-bus.interface';
 import { ConfigFactory } from '@/config/config-factory';
 import { container } from '@/container';
+import { SubscriptionEventConsumer } from '@/modules/notification/application/consumers/subscription-event.consumer';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DependencyContainer } from 'tsyringe';
-import { mockCacheProvider, mockEmailingService, mockMetricsService, mockWeatherProvider } from '../helpers/mocks';
+import {
+  mockCacheProvider,
+  mockEmailingService,
+  mockMetricsService,
+  mockNotificationService,
+  mockWeatherProvider,
+} from '../helpers/mocks';
 import { setupTestDatabase, teardownTestDatabase } from '../helpers/test-database';
 
 // Mock token generator utility
@@ -37,8 +47,31 @@ describe('Subscription Integration Tests', () => {
     // Override only the services we want to mock
     testContainer.registerInstance('MetricsService', mockMetricsService);
     testContainer.registerInstance('EmailingService', mockEmailingService);
+    testContainer.registerInstance('NotificationService', mockNotificationService);
     testContainer.registerInstance('WeatherProvider', mockWeatherProvider);
     testContainer.registerInstance('CacheProvider', mockCacheProvider);
+
+    // Create EventBus instance using factory with test config
+    const testEventBusInstance = EventBusFactory.create(config.eventBus);
+    testContainer.registerInstance('EventBus', testEventBusInstance);
+    testContainer.registerSingleton('SubscriptionEventConsumer', SubscriptionEventConsumer);
+
+    // Initialize event consumers with test container
+    const testEventBus = testContainer.resolve<IEventBus>('EventBus');
+    const testSubscriptionEventConsumer = testContainer.resolve<SubscriptionEventConsumer>('SubscriptionEventConsumer');
+
+    testEventBus.subscribe(
+      SubscriptionCreatedEvent.EVENT_TYPE,
+      testSubscriptionEventConsumer.getSubscriptionCreatedHandler(),
+    );
+    testEventBus.subscribe(
+      SubscriptionConfirmedEvent.EVENT_TYPE,
+      testSubscriptionEventConsumer.getSubscriptionConfirmedHandler(),
+    );
+    testEventBus.subscribe(
+      SubscriptionCancelledEvent.EVENT_TYPE,
+      testSubscriptionEventConsumer.getSubscriptionCancelledHandler(),
+    );
 
     app = createApp(testContainer);
     prisma = dbSetup.prisma;
@@ -104,8 +137,9 @@ describe('Subscription Integration Tests', () => {
       expect(subscriptions[0].confirmationToken).toBeTruthy();
       expect(subscriptions[0].revokeToken).toBeTruthy();
 
-      // Verify email was sent
-      expect(mockEmailingService.sendEmail).toHaveBeenCalled();
+      // Wait for async event processing and verify notification service was called
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(mockNotificationService.sendSubscriptionConfirmation).toHaveBeenCalled();
     });
 
     it('should return 400 for invalid email format', async () => {

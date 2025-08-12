@@ -1,9 +1,17 @@
+import { SubscriptionCancelledEvent, SubscriptionConfirmedEvent, SubscriptionCreatedEvent } from '@/common/events';
+import { EventBusFactory } from '@/common/events/event-bus-factory';
+import { IEventBus } from '@/common/events/interfaces/event-bus.interface';
 import { FetchHttpClient } from '@/common/http-client';
 import logger from '@/common/logging/logger';
 import { BroadcastService } from '@/common/services/broadcast.service';
 import { ConfigFactory } from '@/config';
 import { PrismaClientInstance } from '@/lib/prisma';
-import { EmailTemplateService, GmailEmailingService, NotificationService } from '@/modules/notification';
+import {
+  EmailTemplateService,
+  GmailEmailingService,
+  NotificationService,
+  SubscriptionEventConsumer,
+} from '@/modules/notification';
 import { SubscriptionService } from '@/modules/subscription/application/services/subscription.service';
 import SubscriptionRepository from '@/modules/subscription/infrastructure/repository/SubscriptionRepository';
 import { SubscriptionController } from '@/modules/subscription/presentation/subscription.controller';
@@ -26,6 +34,10 @@ container.registerInstance('Logger', logger);
 container.registerSingleton('HttpClient', FetchHttpClient);
 container.registerSingleton('PromClientRegistry', Registry);
 container.registerSingleton('MetricsService', MetricsService);
+
+// Event Bus
+const eventBusInstance = EventBusFactory.create(config.eventBus);
+container.registerInstance('EventBus', eventBusInstance);
 
 // Weather service configuration
 container.registerInstance('WeatherServiceHttpClientConfig', {
@@ -58,6 +70,9 @@ container.registerSingleton('EmailTemplateService', EmailTemplateService);
 container.registerSingleton('NotificationService', NotificationService);
 container.registerSingleton('BroadcastService', BroadcastService);
 
+// Event consumers
+container.registerSingleton('SubscriptionEventConsumer', SubscriptionEventConsumer);
+
 // Weather module is now handled by weather-service via HTTP client
 container.registerSingleton('WeatherController', WeatherController);
 container.registerSingleton('WeatherService', WeatherService);
@@ -66,6 +81,15 @@ container.registerSingleton('WeatherService', WeatherService);
 container.registerSingleton('SubscriptionRepository', SubscriptionRepository);
 container.registerSingleton('SubscriptionService', SubscriptionService);
 container.registerSingleton('SubscriptionController', SubscriptionController);
+
+// Initialize event consumers for main container
+const eventBus = container.resolve<IEventBus>('EventBus');
+const subscriptionEventConsumer = container.resolve<SubscriptionEventConsumer>('SubscriptionEventConsumer');
+
+// Register subscription event handlers
+eventBus.subscribe(SubscriptionCreatedEvent.EVENT_TYPE, subscriptionEventConsumer.getSubscriptionCreatedHandler());
+eventBus.subscribe(SubscriptionConfirmedEvent.EVENT_TYPE, subscriptionEventConsumer.getSubscriptionConfirmedHandler());
+eventBus.subscribe(SubscriptionCancelledEvent.EVENT_TYPE, subscriptionEventConsumer.getSubscriptionCancelledHandler());
 
 /**
  * Export container for direct access

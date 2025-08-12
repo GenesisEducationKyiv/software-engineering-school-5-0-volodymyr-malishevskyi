@@ -7,6 +7,7 @@ export * from './infrastructure/email/errors/email-errors';
 
 // Application layer exports
 export * from './application/services/notification.service';
+export * from './application/consumers/subscription-event.consumer';
 
 // Infrastructure layer exports
 export * from './infrastructure/email/gmail-emailing.service';
